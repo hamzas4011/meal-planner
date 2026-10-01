@@ -1,13 +1,16 @@
+using Microsoft.EntityFrameworkCore;
+using MealPlanner.Api.Models;
+
+
 namespace MealPlanner.Api.Data
 {
-   public class MealPlannerContext : DbContext
+   public class AppDbContext : DbContext
     {
-        public MealPlanner (DbContextOptions<MvcMovieContext> options)
-        : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
         {
         }
 
-        public DbSet<MealPlanner.Models> { get; set; } = default!;
-        
+        public DbSet<Recipe> Recipes { get; set; } = default!;
     }
 }
