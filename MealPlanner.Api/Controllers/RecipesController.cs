@@ -21,5 +21,14 @@ namespace MealPlanner.Api.Controllers
         {
             return await _context.Recipes.ToListAsync();
         }
+
+        [HttpPost]
+        public async Task<ActionResult<Recipe>> CreateRecipe(Recipe recipe)
+        {
+            _context.Recipes.Add(recipe);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetRecipes), new { id = recipe.Id }, recipe);
+        }
     }
 }
