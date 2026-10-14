@@ -1,4 +1,4 @@
-namespace Ingredient.Api.Models;
+namespace MealPlanner.Api.Models;
 
 public class Ingredient
 {
