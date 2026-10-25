@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MealPlanner.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2e472dafe5650d3cfa242e48aa12600ca0b0c44e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4f8dbccfb2463133b1a2a68ab15b19395c579207")]
 [assembly: System.Reflection.AssemblyProductAttribute("MealPlanner.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MealPlanner.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
