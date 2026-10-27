@@ -14,5 +14,6 @@ namespace MealPlanner.Api.Data
         public DbSet<Recipe> Recipes { get; set; } = default!;
         public DbSet<Ingredient> Ingredients { get; set; } = default!;
         public DbSet<PlannedMeal> PlannedMeals { get; set; } = default!;
+        public DbSet<RecipeIngredient> RecipeIngredients { get; set; } = default!;
     }
 }
