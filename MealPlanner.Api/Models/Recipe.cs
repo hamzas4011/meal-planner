@@ -7,4 +7,6 @@ public class Recipe
 
     public int Servings { get; set; }
 
+    public List<RecipeIngredient> RecipeIngredients { get; set; } = new();
+
 }
