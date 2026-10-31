@@ -2,6 +2,7 @@ using MealPlanner.Api.Data;
 using MealPlanner.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MealPlanner.Api.DTOs;
 
 namespace MealPlanner.Api.Controllers
 {
@@ -29,6 +30,28 @@ namespace MealPlanner.Api.Controllers
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetRecipes), new { id = recipe.Id }, recipe);
+        }
+
+        [HttpPost("{id}/ingredients")]
+        public async Task<ActionResult<RecipeIngredient>> AddIngredientToRecipe(int id, AddIngredientDto dto)
+        {
+            var recipe = await _context.Recipes.FindAsync(id);
+            if (recipe == null)
+            {
+                return NotFound();
+            }
+
+            var recipeIngredient = new RecipeIngredient
+            {
+                RecipeId = id,
+                IngredientId = dto.IngredientId,
+                Quantity = dto.Quantity
+            };
+
+            _context.RecipeIngredients.Add(recipeIngredient);
+            await _context.SaveChangesAsync();
+
+            return Ok(recipeIngredient);
         }
     }
 }
