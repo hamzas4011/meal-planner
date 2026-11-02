@@ -1,39 +1,41 @@
 import './style.css'
+import { h } from './dom'
+import { ingredientsView } from './views/ingredients'
+import { planView } from './views/plan'
+import { recipesView } from './views/recipes'
+import { shoppingView } from './views/shopping'
 
-type Recipe = {
-  id: number
-  name: string | null
-  servings: number
+// Hash routes: #plan, #recipes, #ingredients, #shopping
+const routes = {
+  plan: { label: 'Week plan', view: planView },
+  recipes: { label: 'Recipes', view: recipesView },
+  ingredients: { label: 'Ingredients', view: ingredientsView },
+  shopping: { label: 'Shopping list', view: shoppingView },
 }
+type Route = keyof typeof routes
 
 const app = document.querySelector<HTMLDivElement>('#app')!
+const main = h('main')
+const links = Object.entries(routes).map(([key, r]) => h('a', { href: `#${key}`, 'data-route': key }, r.label))
 
-app.innerHTML = `
-  <h1>Meal Planner</h1>
-  <h2>Recipes</h2>
-  <p id="status">Loading...</p>
-  <ul id="recipes"></ul>
-`
+app.replaceChildren(
+  h('header', {}, h('h1', {}, 'Meal Planner'), h('nav', {}, links)),
+  main,
+)
 
-async function loadRecipes() {
-  const status = document.querySelector<HTMLParagraphElement>('#status')!
-  const list = document.querySelector<HTMLUListElement>('#recipes')!
-
-  try {
-    const res = await fetch('/api/recipes')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const recipes: Recipe[] = await res.json()
-
-    status.textContent = recipes.length ? '' : 'No recipes yet.'
-    list.innerHTML = ''
-    for (const r of recipes) {
-      const li = document.createElement('li')
-      li.textContent = `${r.name ?? '(unnamed)'} - ${r.servings} servings`
-      list.appendChild(li)
-    }
-  } catch (err) {
-    status.textContent = `Could not reach the API: ${(err as Error).message}`
-  }
+function currentRoute(): Route {
+  const key = location.hash.slice(1)
+  return key in routes ? (key as Route) : 'plan'
 }
 
-loadRecipes()
+function render() {
+  const route = currentRoute()
+  for (const link of links) {
+    if (link.dataset.route === route) link.setAttribute('aria-current', 'page')
+    else link.removeAttribute('aria-current')
+  }
+  main.replaceChildren(routes[route].view())
+}
+
+window.addEventListener('hashchange', render)
+render()
