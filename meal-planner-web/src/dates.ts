@@ -7,9 +7,12 @@ export function toIso(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-export function fromIso(s: string): Date {
+// Parses yyyy-MM-dd; returns null for missing or invalid input (e.g. a bad ?week= in the URL).
+export function fromIso(s: string | null): Date | null {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
   const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d)
+  const date = new Date(y, m - 1, d)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
 export function addDays(d: Date, n: number): Date {
@@ -24,9 +27,4 @@ export function startOfWeek(d: Date): Date {
 
 export function formatDay(d: Date): string {
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
-// The week shown in the planner; the shopping list starts from the same week.
-export const selectedWeek = {
-  start: startOfWeek(new Date()),
 }
