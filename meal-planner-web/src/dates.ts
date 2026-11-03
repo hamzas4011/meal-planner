@@ -25,6 +25,18 @@ export function startOfWeek(d: Date): Date {
   return addDays(d, -mondayOffset)
 }
 
+// Always English (e.g. "Mon 2 Nov") so dates match the rest of the UI,
+// whatever language the visitor's browser uses.
+const LOCALE = 'en-GB'
+
 export function formatDay(d: Date): string {
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+export function formatWeekday(d: Date): string {
+  return d.toLocaleDateString(LOCALE, { weekday: 'long' })
+}
+
+export function formatDayMonth(d: Date): string {
+  return d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
 }

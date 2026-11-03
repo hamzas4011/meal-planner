@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type Ref } from 'react'
 
 // focus-visible: show the focus ring for keyboard users, not on every mouse click.
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600'
@@ -17,16 +17,26 @@ const buttonVariants = {
   danger:
     'border-stone-300 bg-white text-red-700 hover:border-red-700 hover:bg-red-50 ' +
     'dark:border-stone-700 dark:bg-stone-900 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950',
+  dangerSolid:
+    'border-red-700 bg-red-700 text-white hover:bg-red-800 ' +
+    'dark:border-red-500 dark:bg-red-500 dark:text-red-950 dark:hover:bg-red-400',
+  ghost:
+    'border-transparent bg-transparent text-emerald-800 hover:bg-emerald-700/10 ' +
+    'dark:text-emerald-300 dark:hover:bg-emerald-400/10',
 }
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof buttonVariants }
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: keyof typeof buttonVariants
+  ref?: Ref<HTMLButtonElement> // React 19: refs are plain props on function components
+}
 
 export function Button({ variant = 'default', className = '', type = 'button', ...props }: ButtonProps) {
   return (
     <button
       type={type}
       className={
-        `cursor-pointer rounded-md border px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60 ` +
+        `inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 ` +
+        `disabled:cursor-not-allowed disabled:opacity-60 ` +
         `${focusRing} ${buttonVariants[variant]} ${className}`
       }
       {...props}
@@ -36,7 +46,7 @@ export function Button({ variant = 'default', className = '', type = 'button', .
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900 ${className}`}>
+    <div className={`rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:shadow-none ${className}`}>
       {children}
     </div>
   )
@@ -47,7 +57,11 @@ let firstPage = true
 
 // Page heading. Also sets the browser tab title, and on navigation moves focus here so
 // screen-reader and keyboard users start at the new page instead of the old nav link.
-export function PageTitle({ children }: { children: string }) {
+export function PageTitle({ children, description, actions }: {
+  children: string
+  description?: string
+  actions?: ReactNode
+}) {
   const ref = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -57,9 +71,15 @@ export function PageTitle({ children }: { children: string }) {
   }, [children])
 
   return (
-    <h2 ref={ref} tabIndex={-1} className="mt-6 mb-3 text-xl font-semibold text-stone-900 outline-none dark:text-stone-100">
-      {children}
-    </h2>
+    <div className="mt-8 mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 ref={ref} tabIndex={-1} className="text-2xl font-bold tracking-tight text-stone-900 outline-none sm:text-3xl dark:text-stone-100">
+          {children}
+        </h2>
+        {description && <p className="mt-1 text-stone-600 dark:text-stone-400">{description}</p>}
+      </div>
+      {actions}
+    </div>
   )
 }
 

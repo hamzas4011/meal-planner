@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { api, type Ingredient } from '../api'
 import { Button, Card, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle } from '../components/ui'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useApiData } from '../useApiData'
 
 export default function IngredientsPage() {
@@ -10,6 +11,7 @@ export default function IngredientsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const nameInput = useRef<HTMLInputElement>(null)
+  const confirm = useConfirm()
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +28,7 @@ export default function IngredientsPage() {
 
   return (
     <section>
-      <PageTitle>Ingredients</PageTitle>
+      <PageTitle description="Everything your recipes can use.">Ingredients</PageTitle>
 
       <Card className="mb-3">
         <form onSubmit={add} className="flex flex-wrap items-end gap-2">
@@ -69,7 +71,10 @@ export default function IngredientsPage() {
                 </span>
                 <Button aria-label={`Edit ${i.name}`} onClick={() => setEditingId(i.id)}>Edit</Button>
                 <Button variant="danger" aria-label={`Delete ${i.name}`}
-                  onClick={() => confirm(`Delete "${i.name}"?`) && run(() => api.ingredients.remove(i.id), `${i.name} deleted`)}>
+                  onClick={async () => {
+                    if (await confirm({ title: `Delete "${i.name}"?`, message: 'It will be removed from your ingredient list.' }))
+                      run(() => api.ingredients.remove(i.id), `${i.name} deleted`)
+                  }}>
                   Delete
                 </Button>
               </li>

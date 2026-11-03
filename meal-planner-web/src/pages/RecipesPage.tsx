@@ -4,6 +4,7 @@ import { api, type Ingredient, type Recipe } from '../api'
 import {
   Button, Card, CommitNumberInput, Empty, ErrorNotice, Field, inputClass, linkClass, Loading, PageTitle,
 } from '../components/ui'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useApiData } from '../useApiData'
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>
@@ -26,7 +27,7 @@ export default function RecipesPage() {
 
   return (
     <section>
-      <PageTitle>Recipes</PageTitle>
+      <PageTitle description="Your recipes and what goes into them.">Recipes</PageTitle>
 
       <Card className="mb-3">
         <form onSubmit={create} className="flex flex-wrap items-end gap-2">
@@ -59,6 +60,7 @@ export default function RecipesPage() {
 
 function RecipeCard({ recipe, allIngredients, run }: { recipe: Recipe; allIngredients: Ingredient[]; run: Run }) {
   const [editing, setEditing] = useState(false)
+  const confirm = useConfirm()
   const title = recipe.name ?? '(unnamed)'
 
   return (
@@ -78,14 +80,18 @@ function RecipeCard({ recipe, allIngredients, run }: { recipe: Recipe; allIngred
             </h3>
             <Button aria-label={`Edit recipe ${title}`} onClick={() => setEditing(true)}>Edit</Button>
             <Button variant="danger" aria-label={`Delete recipe ${title}`}
-              onClick={() => confirm(`Delete recipe "${title}"?`) && run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)}>
+              onClick={async () => {
+                if (await confirm({ title: `Delete "${title}"?`, message: 'The recipe and its ingredient list will be removed.' }))
+                  run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)
+              }}>
               Delete
             </Button>
           </div>
         )}
 
         {recipe.ingredients.length === 0 ? (
-          <Empty>No ingredients yet.</Empty>
+          // If no ingredients exist at all, the form below already explains what to do.
+          allIngredients.length > 0 && <Empty>No ingredients yet. Add the first one below.</Empty>
         ) : (
           <ul className="my-2 divide-y divide-stone-200 dark:divide-stone-800" aria-label={`Ingredients in ${title}`}>
             {recipe.ingredients.map((ri) => (

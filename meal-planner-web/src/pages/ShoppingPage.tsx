@@ -5,6 +5,7 @@ import {
   Button, Card, Empty, ErrorNotice, Field, inputClass, linkClass, Loading, PageTitle,
 } from '../components/ui'
 import { addDays, fromIso, startOfWeek, toIso } from '../dates'
+import { PrinterIcon } from '../components/icons'
 import { useApiData } from '../useApiData'
 
 function formatQuantity(q: number) {
@@ -56,7 +57,7 @@ export default function ShoppingPage() {
 
   return (
     <section>
-      <PageTitle>Shopping list</PageTitle>
+      <PageTitle description="Everything you need for the planned meals, added up.">Shopping list</PageTitle>
 
       <Card className="mb-3 print:hidden">
         <form className="flex flex-wrap items-end gap-3"
@@ -82,7 +83,7 @@ export default function ShoppingPage() {
               aria-describedby={rangeError ? 'range-error' : undefined} aria-invalid={rangeError ? true : undefined} />
           </Field>
           <Button type="submit" variant="primary">Show list</Button>
-          <Button onClick={() => window.print()}>Print</Button>
+          <Button onClick={() => window.print()}><PrinterIcon className="size-4" /> Print</Button>
         </form>
         {rangeError && (
           <p id="range-error" role="alert" className="mt-2 text-red-700 dark:text-red-300">{rangeError}</p>
