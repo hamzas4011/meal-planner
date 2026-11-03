@@ -1,8 +1,10 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+
+// focus-visible: show the focus ring for keyboard users, not on every mouse click.
+const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600'
 
 export const inputClass =
-  'rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-stone-900 ' +
-  'focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600 ' +
+  `rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-stone-900 ${focusRing} ` +
   'dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100'
 
 const buttonVariants = {
@@ -24,8 +26,8 @@ export function Button({ variant = 'default', className = '', type = 'button', .
     <button
       type={type}
       className={
-        `cursor-pointer rounded-md border px-3 py-1.5 focus:outline-2 focus:outline-offset-1 ` +
-        `focus:outline-emerald-600 ${buttonVariants[variant]} ${className}`
+        `cursor-pointer rounded-md border px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60 ` +
+        `${focusRing} ${buttonVariants[variant]} ${className}`
       }
       {...props}
     />
@@ -40,8 +42,35 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   )
 }
 
-export function PageTitle({ children }: { children: ReactNode }) {
-  return <h2 className="mt-6 mb-3 text-xl font-semibold text-stone-900 dark:text-stone-100">{children}</h2>
+// The first page shown after the app opens should not steal focus; later navigations should.
+let firstPage = true
+
+// Page heading. Also sets the browser tab title, and on navigation moves focus here so
+// screen-reader and keyboard users start at the new page instead of the old nav link.
+export function PageTitle({ children }: { children: string }) {
+  const ref = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    document.title = `${children} · Meal Planner`
+    if (firstPage) firstPage = false
+    else ref.current?.focus()
+  }, [children])
+
+  return (
+    <h2 ref={ref} tabIndex={-1} className="mt-6 mb-3 text-xl font-semibold text-stone-900 outline-none dark:text-stone-100">
+      {children}
+    </h2>
+  )
+}
+
+// A label shown above its input, so it stays visible while typing (placeholders disappear).
+export function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`flex flex-col gap-1 text-sm ${className}`}>
+      <span className="font-medium text-stone-700 dark:text-stone-300">{label}</span>
+      {children}
+    </label>
+  )
 }
 
 export function ErrorNotice({ message }: { message: string | null }) {
@@ -53,8 +82,39 @@ export function ErrorNotice({ message }: { message: string | null }) {
   )
 }
 
+// Helpful hint (not an error), e.g. "create a recipe first".
+export function InfoNotice({ children }: { children: ReactNode }) {
+  return (
+    <p className="my-3 rounded-md bg-emerald-50 px-3 py-2 text-emerald-900 print:hidden dark:bg-emerald-950 dark:text-emerald-200">
+      {children}
+    </p>
+  )
+}
+
+export function Loading() {
+  return (
+    <p role="status" className="py-3 text-stone-500 dark:text-stone-400">
+      Loading…
+    </p>
+  )
+}
+
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-1.5 text-stone-500 italic">{children}</p>
+  return <p className="py-1.5 text-stone-500 italic dark:text-stone-400">{children}</p>
+}
+
+export const linkClass =
+  `rounded-sm text-emerald-700 underline underline-offset-2 hover:text-emerald-800 ${focusRing} ` +
+  'dark:text-emerald-400 dark:hover:text-emerald-300'
+
+// Screen readers don't notice when a list silently updates, so actions announce
+// what happened ("Tomato added") through a polite live region rendered in App.
+export function announce(message: string) {
+  const region = document.getElementById('announcer')
+  if (!region) return
+  region.textContent = ''
+  // Clearing first makes the same message be read again if it repeats.
+  setTimeout(() => (region.textContent = message), 50)
 }
 
 // Number field that saves only when you leave it or press Enter, not on every keystroke.
@@ -76,11 +136,13 @@ export function CommitNumberInput({
   className?: string
 }) {
   const [text, setText] = useState(String(value))
+  const cancelled = useRef(false)
   useEffect(() => setText(String(value)), [value])
 
   return (
     <input
       type="number"
+      inputMode="decimal"
       aria-label={label}
       title={label}
       min={min}
@@ -89,8 +151,19 @@ export function CommitNumberInput({
       value={text}
       className={`${inputClass} ${className}`}
       onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          cancelled.current = true
+          e.currentTarget.blur()
+        }
+      }}
       onBlur={(e) => {
+        if (cancelled.current) {
+          cancelled.current = false
+          setText(String(value)) // Escape: undo the edit, don't save
+          return
+        }
         const n = e.currentTarget.valueAsNumber
         if (!e.currentTarget.checkValidity() || Number.isNaN(n)) {
           setText(String(value)) // invalid: put the saved value back

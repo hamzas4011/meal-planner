@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { announce } from './components/ui'
 
 // Loads data for a page and exposes `run` for actions (create, update, delete):
 // run the action, reload the data, and show any error message from the API.
@@ -23,11 +24,13 @@ export function useApiData<T>(loader: () => Promise<T>, deps: unknown[]) {
     reload()
   }, [reload])
 
+  // `success` is announced to screen-reader users once the action has worked.
   const run = useCallback(
-    async (action: () => Promise<unknown>) => {
+    async (action: () => Promise<unknown>, success?: string) => {
       try {
         await action()
         await reload()
+        if (success) announce(success)
         return true
       } catch (err) {
         setError((err as Error).message)
@@ -37,5 +40,6 @@ export function useApiData<T>(loader: () => Promise<T>, deps: unknown[]) {
     [reload],
   )
 
-  return { data, error, run }
+  const loading = data === null && error === null
+  return { data, error, loading, run }
 }
