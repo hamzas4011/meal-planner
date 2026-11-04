@@ -6,7 +6,19 @@ A full-stack web app to plan your meals for the week. It automatically works out
 
 **Add ingredients → build recipes → plan your week → get your shopping list.**
 
-<!-- Add a screenshot here later, e.g. ![Week plan](docs/week-plan.png) -->
+## Screenshots
+
+### Week plan
+![Week plan](docs/week-plan.png)
+
+### Recipes
+![Recipes](docs/recipes.png)
+
+### Ingredients
+![Ingredients](docs/ingredients.png)
+
+### Shopping list
+![Shopping list](docs/shopping-list.png)
 
 ## Features
 
