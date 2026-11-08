@@ -74,16 +74,18 @@ export default function ShoppingPage() {
             setRangeError(null)
             setParams({ from: newFrom, to: newTo })
           }}>
-          <Field label="From">
+          <Field label="From" className="min-w-36 flex-1 sm:flex-none">
             <input type="date" name="from" required defaultValue={from} key={`from-${from}`} className={inputClass}
               aria-describedby={rangeError ? 'range-error' : undefined} aria-invalid={rangeError ? true : undefined} />
           </Field>
-          <Field label="To">
+          <Field label="To" className="min-w-36 flex-1 sm:flex-none">
             <input type="date" name="to" required defaultValue={to} key={`to-${to}`} className={inputClass}
               aria-describedby={rangeError ? 'range-error' : undefined} aria-invalid={rangeError ? true : undefined} />
           </Field>
-          <Button type="submit" variant="primary">Show list</Button>
-          <Button onClick={() => window.print()}><PrinterIcon className="size-4" /> Print</Button>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button type="submit" variant="primary" className="flex-1 sm:flex-none">Show list</Button>
+            <Button onClick={() => window.print()} className="flex-1 sm:flex-none"><PrinterIcon className="size-4" /> Print</Button>
+          </div>
         </form>
         {rangeError && (
           <p id="range-error" role="alert" className="mt-2 text-red-700 dark:text-red-300">{rangeError}</p>

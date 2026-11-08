@@ -39,7 +39,7 @@ export default function RecipesPage() {
 
       <Card className="mb-3">
         <form onSubmit={create} className="flex flex-wrap items-end gap-2">
-          <Field label="Recipe name" className="min-w-48 flex-1">
+          <Field label="Recipe name" className="min-w-36 flex-1">
             <input className={inputClass} placeholder="e.g. Pasta bolognese"
               required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -47,7 +47,7 @@ export default function RecipesPage() {
             <input type="number" inputMode="numeric" className={inputClass} required min={1} max={100}
               value={servings} onChange={(e) => setServings(e.target.valueAsNumber)} />
           </Field>
-          <Button type="submit" variant="primary">Create recipe</Button>
+          <Button type="submit" variant="primary" className="w-full sm:w-auto">Create recipe</Button>
         </form>
       </Card>
 
@@ -154,7 +154,7 @@ function RecipeEditor({ recipe, allIngredients, focusIngredient, run, onDone }: 
   return (
     <>
       <div className="flex flex-wrap items-end gap-2">
-        <Field label="Recipe name" className="min-w-48 flex-1">
+        <Field label="Recipe name" className="min-w-36 flex-1">
           <CommitTextInput value={recipe.name ?? ''} maxLength={200} autoFocus={!focusIngredient}
             onCommit={(name) => save({ name, servings: recipe.servings })} />
         </Field>
@@ -260,7 +260,7 @@ function AddIngredientForm({ recipe, allIngredients, autoFocus, run }: {
     <form onSubmit={add} className="mt-3">
       <div className="flex flex-wrap items-end gap-2">
         {available.length > 0 && (
-          <Field label="Add an ingredient" className="min-w-48 flex-1">
+          <Field label="Add an ingredient" className="w-full sm:w-auto sm:min-w-48 sm:flex-1">
             <select ref={selectField} className={inputClass} required value={choice} autoFocus={autoFocus}
               onChange={(e) => { setChoice(e.target.value); setProblem(null) }}>
               <option value="">Choose…</option>
@@ -278,17 +278,17 @@ function AddIngredientForm({ recipe, allIngredients, autoFocus, run }: {
                 autoFocus={autoFocus || choice === NEW_INGREDIENT}
                 value={newName} onChange={(e) => { setNewName(e.target.value); setProblem(null) }} />
             </Field>
-            <Field label="Unit (optional)" className="w-32">
+            <Field label="Unit (optional)" className="min-w-24 flex-1 sm:w-32 sm:flex-none">
               <input className={inputClass} placeholder="g, ml, pcs" maxLength={20}
                 value={newUnit} onChange={(e) => { setNewUnit(e.target.value); setProblem(null) }} />
             </Field>
           </>
         )}
-        <Field label={`Amount${unit ? ` (${unit})` : ''}`} className="w-28">
+        <Field label={`Amount${unit ? ` (${unit})` : ''}`} className="min-w-24 flex-1 sm:w-28 sm:flex-none">
           <input type="number" inputMode="decimal" className={inputClass}
             required min={0.01} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
         </Field>
-        <Button type="submit" aria-label={`Add ingredient to ${title}`}>Add</Button>
+        <Button type="submit" className="flex-1 sm:flex-none" aria-label={`Add ingredient to ${title}`}>Add</Button>
       </div>
       {problem && <p role="alert" className="mt-2 text-red-700 dark:text-red-300">{problem}</p>}
     </form>

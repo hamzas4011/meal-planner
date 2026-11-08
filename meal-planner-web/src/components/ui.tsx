@@ -6,7 +6,7 @@ const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-1 focus-
 
 // text-base (16px) matters: iPhones zoom the whole page when a field with smaller text gets focus.
 export const inputClass =
-  `rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-base text-stone-900 ${focusRing} ` +
+  `min-h-9.5 rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-base text-stone-900 ${focusRing} ` +
   'dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100'
 
 const buttonVariants = {

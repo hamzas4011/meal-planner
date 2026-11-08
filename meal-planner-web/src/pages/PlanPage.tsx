@@ -66,7 +66,7 @@ export default function PlanPage() {
       <PageTitle description="Plan what you'll eat each day of the week."
         actions={
           <Link to={`/shopping?from=${from}&to=${to}`}
-            className={`inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400`}>
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 font-medium sm:w-auto text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400`}>
             <CartIcon className="size-4" /> Shopping list for {isThisWeek ? 'this week' : weekLabel}
           </Link>
         }>
@@ -161,7 +161,7 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
       </ol>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-emerald-200/70 pt-4 dark:border-emerald-900">
-        <Button variant="primary" disabled={busy} aria-busy={busy}
+        <Button variant="primary" className="w-full sm:w-auto" disabled={busy} aria-busy={busy}
           onClick={async () => { setBusy(true); await onExample(); setBusy(false) }}>
           <SparklesIcon className="size-4" /> {busy ? 'Adding examples…' : 'Try it with example recipes'}
         </Button>
@@ -279,14 +279,14 @@ function AddMealForm({ date, dayLabel, recipes, run, onDone }: {
           <option key={r.id} value={r.id}>{r.name ?? '(unnamed)'}</option>
         ))}
       </select>
-      <div className="flex items-center gap-2">
-        <label className="flex items-center gap-2 text-sm">
-          Servings
-          <input type="number" inputMode="numeric" className={`${inputClass} w-16 py-1`}
-            required min={1} max={100} value={servings} onChange={(e) => setServings(e.target.valueAsNumber)} />
-        </label>
-        <Button type="submit" variant="primary" className="ml-auto py-1">Add</Button>
-        <Button onClick={onDone} className="py-1">Cancel</Button>
+      <label className="flex items-center gap-2 text-sm">
+        Servings
+        <input type="number" inputMode="numeric" className={`${inputClass} w-16`}
+          required min={1} max={100} value={servings} onChange={(e) => setServings(e.target.valueAsNumber)} />
+      </label>
+      <div className="flex gap-2">
+        <Button type="submit" variant="primary" className="flex-1">Add</Button>
+        <Button onClick={onDone} className="flex-1">Cancel</Button>
       </div>
     </form>
   )

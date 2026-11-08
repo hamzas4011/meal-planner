@@ -60,11 +60,11 @@ export default function IngredientsPage() {
             <input ref={nameInput} className={inputClass} placeholder="e.g. Tomato"
               required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="Unit (optional)" className="w-40">
+          <Field label="Unit (optional)" className="min-w-24 flex-1 sm:w-40 sm:flex-none">
             <input className={inputClass} placeholder="g, ml, pcs"
               maxLength={20} value={unit} onChange={(e) => setUnit(e.target.value)} />
           </Field>
-          <Button type="submit" variant="primary">Add ingredient</Button>
+          <Button type="submit" variant="primary" className="w-full sm:w-auto">Add ingredient</Button>
         </form>
       </Card>
 
@@ -123,11 +123,13 @@ function EditRow({ ingredient, onSave, onCancel }: {
           <input className={inputClass} required maxLength={100}
             value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </Field>
-        <Field label="Unit (optional)" className="w-40">
+        <Field label="Unit (optional)" className="min-w-24 flex-1 sm:w-40 sm:flex-none">
           <input className={inputClass} maxLength={20} value={unit} onChange={(e) => setUnit(e.target.value)} />
         </Field>
-        <Button type="submit" variant="primary">Save</Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Button type="submit" variant="primary" className="flex-1 sm:flex-none">Save</Button>
+          <Button onClick={onCancel} className="flex-1 sm:flex-none">Cancel</Button>
+        </div>
       </form>
     </li>
   )
