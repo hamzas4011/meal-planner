@@ -1,8 +1,7 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useRef, useState } from 'react'
 import { api, type Ingredient, type Recipe } from '../api'
 import {
-  Button, Card, CommitNumberInput, Empty, ErrorNotice, Field, inputClass, linkClass, Loading, PageTitle,
+  Button, Card, CommitNumberInput, CommitTextInput, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle,
 } from '../components/ui'
 import { useConfirm } from '../components/ConfirmDialog'
 import { useApiData } from '../useApiData'
@@ -19,10 +18,16 @@ export default function RecipesPage() {
   )
   const [name, setName] = useState('')
   const [servings, setServings] = useState(2)
+  // A recipe that was just created opens ready for its ingredients.
+  const [newRecipeId, setNewRecipeId] = useState<number | null>(null)
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
-    if (await run(() => api.recipes.create({ name, servings }), `Recipe ${name.trim()} created`)) setName('')
+    const ok = await run(async () => {
+      const created = await api.recipes.create({ name, servings })
+      setNewRecipeId(created.id)
+    }, `Recipe ${name.trim()} created. Add its ingredients.`)
+    if (ok) setName('')
   }
 
   return (
@@ -50,7 +55,7 @@ export default function RecipesPage() {
         <div className="grid gap-3">
           {data.recipes.length === 0 && <Empty>No recipes yet. Create one above.</Empty>}
           {data.recipes.map((r) => (
-            <RecipeCard key={r.id} recipe={r} allIngredients={data.ingredients} run={run} />
+            <RecipeCard key={r.id} recipe={r} allIngredients={data.ingredients} isNew={r.id === newRecipeId} run={run} />
           ))}
         </div>
       )}
@@ -58,134 +63,219 @@ export default function RecipesPage() {
   )
 }
 
-function RecipeCard({ recipe, allIngredients, run }: { recipe: Recipe; allIngredients: Ingredient[]; run: Run }) {
-  const [editing, setEditing] = useState(false)
+function RecipeCard({ recipe, allIngredients, isNew, run }: {
+  recipe: Recipe
+  allIngredients: Ingredient[]
+  isNew: boolean
+  run: Run
+}) {
+  const [editing, setEditing] = useState(isNew)
+  const editButton = useRef<HTMLButtonElement>(null)
   const confirm = useConfirm()
   const title = recipe.name ?? '(unnamed)'
+
+  function stopEditing() {
+    setEditing(false)
+    // Put focus back on the Edit button, so keyboard users don't get lost.
+    setTimeout(() => editButton.current?.focus())
+  }
 
   return (
     // <article> + heading lets screen-reader users jump between recipes.
     <article aria-label={title}>
       <Card>
         {editing ? (
-          <EditRecipeForm recipe={recipe} onCancel={() => setEditing(false)}
-            onSave={async (dto) => {
-              if (await run(() => api.recipes.update(recipe.id, dto), `Recipe ${dto.name.trim()} saved`)) setEditing(false)
-            }} />
+          <RecipeEditor recipe={recipe} allIngredients={allIngredients} focusIngredient={isNew} run={run} onDone={stopEditing} />
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="min-w-0 flex-1 font-semibold text-stone-900 dark:text-stone-100">
-              {title}
-              <span className="font-normal text-stone-500 dark:text-stone-400"> · serves {recipe.servings}</span>
-            </h3>
-            <Button aria-label={`Edit recipe ${title}`} onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger" aria-label={`Delete recipe ${title}`}
-              onClick={async () => {
-                if (await confirm({ title: `Delete "${title}"?`, message: 'The recipe and its ingredient list will be removed.' }))
-                  run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)
-              }}>
-              Delete
-            </Button>
-          </div>
-        )}
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="min-w-0 flex-1 font-semibold text-stone-900 dark:text-stone-100">
+                {title}
+                <span className="font-normal text-stone-500 dark:text-stone-400"> · serves {recipe.servings}</span>
+              </h3>
+              <Button ref={editButton} aria-label={`Edit recipe ${title}`} onClick={() => setEditing(true)}>Edit</Button>
+              <Button variant="danger" aria-label={`Delete recipe ${title}`}
+                onClick={async () => {
+                  if (await confirm({ title: `Delete "${title}"?`, message: 'The recipe and its ingredient list will be removed.' }))
+                    run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)
+                }}>
+                Delete
+              </Button>
+            </div>
 
-        {recipe.ingredients.length === 0 ? (
-          // If no ingredients exist at all, the form below already explains what to do.
-          allIngredients.length > 0 && <Empty>No ingredients yet. Add the first one below.</Empty>
-        ) : (
-          <ul className="my-2 divide-y divide-stone-200 dark:divide-stone-800" aria-label={`Ingredients in ${title}`}>
-            {recipe.ingredients.map((ri) => (
-              <li key={ri.id} className="flex flex-wrap items-center gap-2 py-1.5">
-                <span className="min-w-0 flex-1">{ri.ingredientName ?? '(unnamed)'}</span>
-                <CommitNumberInput label={`Quantity of ${ri.ingredientName}${ri.unit ? ` in ${ri.unit}` : ''}`}
-                  value={ri.quantity} min={0.01} step="any"
-                  onCommit={(quantity) =>
-                    run(() => api.recipes.updateIngredient(recipe.id, ri.id, { ingredientId: ri.ingredientId, quantity }),
-                      `${ri.ingredientName} updated to ${quantity}${ri.unit ? ` ${ri.unit}` : ''}`)} />
-                <span className="w-10 text-stone-500 dark:text-stone-400" aria-hidden="true">{ri.unit}</span>
-                <Button variant="danger" aria-label={`Remove ${ri.ingredientName} from ${title}`}
-                  onClick={() => run(() => api.recipes.removeIngredient(recipe.id, ri.id), `${ri.ingredientName} removed`)}>
-                  Remove
-                </Button>
-              </li>
-            ))}
-          </ul>
+            {recipe.ingredients.length === 0 ? (
+              <Empty>No ingredients yet. Press Edit to add some.</Empty>
+            ) : (
+              <ul className="mt-2 divide-y divide-stone-200 dark:divide-stone-800" aria-label={`Ingredients in ${title}`}>
+                {recipe.ingredients.map((ri) => (
+                  <li key={ri.id} className="flex items-baseline justify-between gap-3 py-1.5">
+                    <span className="min-w-0">{ri.ingredientName ?? '(unnamed)'}</span>
+                    <span className="text-stone-600 tabular-nums dark:text-stone-400">
+                      {ri.quantity}{ri.unit ? ` ${ri.unit}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
-
-        <AddIngredientForm recipe={recipe} allIngredients={allIngredients} run={run} />
       </Card>
     </article>
   )
 }
 
-function EditRecipeForm({ recipe, onSave, onCancel }: {
+// Everything here saves as you go, so there is one way out: Done.
+function RecipeEditor({ recipe, allIngredients, focusIngredient, run, onDone }: {
   recipe: Recipe
-  onSave: (dto: { name: string; servings: number }) => void
-  onCancel: () => void
+  allIngredients: Ingredient[]
+  focusIngredient: boolean
+  run: Run
+  onDone: () => void
 }) {
-  const [name, setName] = useState(recipe.name ?? '')
-  const [servings, setServings] = useState(recipe.servings)
+  const title = recipe.name ?? '(unnamed)'
+  const save = (dto: { name: string; servings: number }) =>
+    run(() => api.recipes.update(recipe.id, dto), `Recipe ${dto.name} saved`)
 
   return (
-    <form className="flex flex-wrap items-end gap-2"
-      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
-      onSubmit={(e) => { e.preventDefault(); onSave({ name, servings }) }}>
-      <Field label="Recipe name" className="min-w-48 flex-1">
-        <input className={inputClass} required maxLength={200}
-          value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      </Field>
-      <Field label="Servings" className="w-24">
-        <input type="number" inputMode="numeric" className={inputClass} required min={1} max={100}
-          value={servings} onChange={(e) => setServings(e.target.valueAsNumber)} />
-      </Field>
-      <Button type="submit" variant="primary">Save</Button>
-      <Button onClick={onCancel}>Cancel</Button>
-    </form>
+    <>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Recipe name" className="min-w-48 flex-1">
+          <CommitTextInput value={recipe.name ?? ''} maxLength={200} autoFocus={!focusIngredient}
+            onCommit={(name) => save({ name, servings: recipe.servings })} />
+        </Field>
+        <Field label="Servings" className="w-24">
+          <CommitNumberInput label={`Servings of ${title}`} value={recipe.servings} min={1} max={100} className="w-full"
+            onCommit={(servings) => save({ name: recipe.name ?? '', servings })} />
+        </Field>
+      </div>
+
+      {recipe.ingredients.length > 0 && (
+        <ul className="mt-3 divide-y divide-stone-200 dark:divide-stone-800" aria-label={`Ingredients in ${title}`}>
+          {recipe.ingredients.map((ri) => (
+            <li key={ri.id} className="flex flex-wrap items-center gap-2 py-1.5">
+              <span className="min-w-0 flex-1">{ri.ingredientName ?? '(unnamed)'}</span>
+              <CommitNumberInput label={`Quantity of ${ri.ingredientName}${ri.unit ? ` in ${ri.unit}` : ''}`}
+                value={ri.quantity} min={0.01} step="any"
+                onCommit={(quantity) =>
+                  run(() => api.recipes.updateIngredient(recipe.id, ri.id, { ingredientId: ri.ingredientId, quantity }),
+                    `${ri.ingredientName} updated to ${quantity}${ri.unit ? ` ${ri.unit}` : ''}`)} />
+              <span className="w-14 text-stone-500 dark:text-stone-400" aria-hidden="true">{ri.unit}</span>
+              <Button variant="danger" aria-label={`Remove ${ri.ingredientName} from ${title}`}
+                onClick={() => run(() => api.recipes.removeIngredient(recipe.id, ri.id), `${ri.ingredientName} removed`)}>
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <AddIngredientForm recipe={recipe} allIngredients={allIngredients} autoFocus={focusIngredient} run={run} />
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-stone-200 pt-3 dark:border-stone-800">
+        <p className="text-sm text-stone-600 dark:text-stone-400">Changes save automatically.</p>
+        <Button variant="primary" aria-label={`Done editing ${title}`} onClick={onDone}>Done</Button>
+      </div>
+    </>
   )
 }
 
-function AddIngredientForm({ recipe, allIngredients, run }: { recipe: Recipe; allIngredients: Ingredient[]; run: Run }) {
-  const [ingredientId, setIngredientId] = useState('')
+const NEW_INGREDIENT = 'new'
+
+// Finds an ingredient the user retyped, so it isn't created twice. A different unit counts
+// as a different ingredient: "Garlic (g)" must not turn into that many "Garlic (cloves)".
+function findExisting(ingredients: Ingredient[], name: string, unit: string) {
+  const same = (a: string | null, b: string) => (a ?? '').toLowerCase() === b.toLowerCase()
+  return ingredients.find((i) => same(i.name, name) && (!unit || same(i.unit, unit)))
+}
+
+function AddIngredientForm({ recipe, allIngredients, autoFocus, run }: {
+  recipe: Recipe
+  allIngredients: Ingredient[]
+  autoFocus: boolean
+  run: Run
+}) {
+  const [choice, setChoice] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newUnit, setNewUnit] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [problem, setProblem] = useState<string | null>(null)
+  const selectField = useRef<HTMLSelectElement>(null)
+  const nameField = useRef<HTMLInputElement>(null)
   const title = recipe.name ?? '(unnamed)'
 
-  if (allIngredients.length === 0) {
-    return (
-      <p className="text-stone-500 dark:text-stone-400">
-        No ingredients exist yet. <Link to="/ingredients" className={linkClass}>Add ingredients</Link> first.
-      </p>
-    )
-  }
   const used = new Set(recipe.ingredients.map((ri) => ri.ingredientId))
   const available = allIngredients.filter((i) => !used.has(i.id))
-  if (available.length === 0) return null
-
-  const selected = available.find((i) => i.id === Number(ingredientId))
+  // With nothing left to pick from, the only option is typing a new one.
+  const creating = choice === NEW_INGREDIENT || available.length === 0
+  const selected = creating ? undefined : available.find((i) => i.id === Number(choice))
+  const unit = creating ? newUnit.trim() : selected?.unit
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
-    const ok = await run(
-      () => api.recipes.addIngredient(recipe.id, { ingredientId: Number(ingredientId), quantity: Number(quantity) }),
-      `${selected?.name} added to ${title}`)
+    const typedName = newName.trim()
+    const typedUnit = newUnit.trim()
+    if (creating && !typedName) {
+      setProblem('Enter a name for the new ingredient.')
+      return
+    }
+
+    const match = creating ? findExisting(allIngredients, typedName, typedUnit) : selected
+    if (match && used.has(match.id)) {
+      setProblem(`${match.name} is already in this recipe. Change its amount above instead.`)
+      return
+    }
+    setProblem(null)
+
+    const ok = await run(async () => {
+      const ingredientId = match?.id ?? (await api.ingredients.create({ name: typedName, unit: typedUnit || null })).id
+      await api.recipes.addIngredient(recipe.id, { ingredientId, quantity: Number(quantity) })
+    }, `${match?.name ?? typedName} added to ${title}`)
+
     if (ok) {
-      setIngredientId('')
+      setChoice('')
+      setNewName('')
+      setNewUnit('')
       setQuantity('')
+      // Ready for the next one.
+      setTimeout(() => (selectField.current ?? nameField.current)?.focus())
     }
   }
 
   return (
-    <form onSubmit={add} className="mt-2 flex flex-wrap items-center gap-2">
-      <select className={inputClass} aria-label={`Ingredient to add to ${title}`} required
-        value={ingredientId} onChange={(e) => setIngredientId(e.target.value)}>
-        <option value="">Add ingredient…</option>
-        {available.map((i) => (
-          <option key={i.id} value={i.id}>{i.unit ? `${i.name} (${i.unit})` : i.name}</option>
-        ))}
-      </select>
-      <input type="number" inputMode="decimal" className={`${inputClass} w-24`}
-        aria-label={`Quantity${selected?.unit ? ` in ${selected.unit}` : ''}`} placeholder={selected?.unit ?? 'qty'}
-        required min={0.01} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-      <Button type="submit" aria-label={`Add ingredient to ${title}`}>Add</Button>
+    <form onSubmit={add} className="mt-3">
+      <div className="flex flex-wrap items-end gap-2">
+        {available.length > 0 && (
+          <Field label="Add an ingredient" className="min-w-48 flex-1">
+            <select ref={selectField} className={inputClass} required value={choice} autoFocus={autoFocus}
+              onChange={(e) => { setChoice(e.target.value); setProblem(null) }}>
+              <option value="">Choose…</option>
+              <option value={NEW_INGREDIENT}>+ New ingredient…</option>
+              {available.map((i) => (
+                <option key={i.id} value={i.id}>{i.unit ? `${i.name} (${i.unit})` : i.name}</option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {creating && (
+          <>
+            <Field label="New ingredient" className="min-w-40 flex-1">
+              <input ref={nameField} className={inputClass} placeholder="e.g. Tomato" required maxLength={100}
+                autoFocus={autoFocus || choice === NEW_INGREDIENT}
+                value={newName} onChange={(e) => { setNewName(e.target.value); setProblem(null) }} />
+            </Field>
+            <Field label="Unit (optional)" className="w-32">
+              <input className={inputClass} placeholder="g, ml, pcs" maxLength={20}
+                value={newUnit} onChange={(e) => { setNewUnit(e.target.value); setProblem(null) }} />
+            </Field>
+          </>
+        )}
+        <Field label={`Amount${unit ? ` (${unit})` : ''}`} className="w-28">
+          <input type="number" inputMode="decimal" className={inputClass}
+            required min={0.01} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        </Field>
+        <Button type="submit" aria-label={`Add ingredient to ${title}`}>Add</Button>
+      </div>
+      {problem && <p role="alert" className="mt-2 text-red-700 dark:text-red-300">{problem}</p>}
     </form>
   )
 }

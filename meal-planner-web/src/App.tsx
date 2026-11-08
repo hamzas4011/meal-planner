@@ -1,7 +1,8 @@
 import type { ComponentType, SVGProps } from 'react'
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router'
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { ConfirmProvider } from './components/ConfirmDialog'
 import { BookIcon, CalendarIcon, CartIcon, LeafIcon } from './components/icons'
+import { addDays, fromIso, startOfWeek, toIso } from './dates'
 import IngredientsPage from './pages/IngredientsPage'
 import PlanPage from './pages/PlanPage'
 import RecipesPage from './pages/RecipesPage'
@@ -19,7 +20,24 @@ const links: NavItem[] = [
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600'
 
+// Moving between the plan and the shopping list keeps you on the same week.
+function linkTarget(to: string, pathname: string, params: URLSearchParams) {
+  const fromPlan = to === '/shopping' && pathname === '/plan'
+  const fromShopping = to === '/plan' && pathname === '/shopping'
+  if (!fromPlan && !fromShopping) return to
+
+  const day = fromIso(params.get(fromPlan ? 'week' : 'from'))
+  if (!day) return to
+  const start = startOfWeek(day)
+  return fromPlan
+    ? `/shopping?from=${toIso(start)}&to=${toIso(addDays(start, 6))}`
+    : `/plan?week=${toIso(start)}`
+}
+
 export default function App() {
+  const { pathname } = useLocation()
+  const [params] = useSearchParams()
+
   return (
     <ConfirmProvider>
       {/* Lets keyboard users jump past the navigation; only visible when focused. */}
@@ -42,7 +60,7 @@ export default function App() {
             <ul className="flex gap-1">
               {links.map(({ to, label, icon: Icon }) => (
                 <li key={to}>
-                  <NavLink to={to}
+                  <NavLink to={linkTarget(to, pathname, params)}
                     className={({ isActive }) =>
                       `flex items-center gap-2 rounded-lg px-3 py-2 font-medium ${focusRing} ${
                         isActive
@@ -76,7 +94,7 @@ export default function App() {
         <ul className="grid grid-cols-4">
           {links.map(({ to, short, icon: Icon }) => (
             <li key={to}>
-              <NavLink to={to}
+              <NavLink to={linkTarget(to, pathname, params)}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${focusRing} ${
                     isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-600 dark:text-stone-400'

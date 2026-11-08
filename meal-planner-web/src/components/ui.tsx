@@ -137,6 +137,49 @@ export function announce(message: string) {
   setTimeout(() => (region.textContent = message), 50)
 }
 
+// Text field that saves only when you leave it or press Enter. Use inside a <Field> for its label.
+export function CommitTextInput({
+  value,
+  onCommit,
+  maxLength,
+  autoFocus,
+}: {
+  value: string
+  onCommit: (value: string) => void
+  maxLength?: number
+  autoFocus?: boolean
+}) {
+  const [text, setText] = useState(value)
+  const cancelled = useRef(false)
+  useEffect(() => setText(value), [value])
+
+  return (
+    <input
+      className={inputClass}
+      maxLength={maxLength}
+      autoFocus={autoFocus}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          cancelled.current = true
+          e.currentTarget.blur()
+        }
+      }}
+      onBlur={() => {
+        const trimmed = text.trim()
+        if (cancelled.current || !trimmed) {
+          cancelled.current = false
+          setText(value) // Escape or left empty: put the saved value back
+          return
+        }
+        if (trimmed !== value) onCommit(trimmed)
+      }}
+    />
+  )
+}
+
 // Number field that saves only when you leave it or press Enter, not on every keystroke.
 export function CommitNumberInput({
   value,

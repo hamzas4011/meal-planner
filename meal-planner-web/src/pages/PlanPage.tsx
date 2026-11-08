@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { api, type PlannedMeal, type Recipe } from '../api'
 import { addExampleData } from '../exampleData'
 import {
-  BookIcon, CalendarIcon, CartIcon, ChevronLeftIcon, ChevronRightIcon, LeafIcon, PlusIcon, SparklesIcon, XIcon,
+  BookIcon, CalendarIcon, CartIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, SparklesIcon, XIcon,
 } from '../components/icons'
 import {
   Button, Card, CommitNumberInput, ErrorNotice, inputClass, linkClass, Loading, PageTitle,
@@ -40,7 +40,7 @@ export default function PlanPage() {
         actions={
           <Link to={`/shopping?from=${from}&to=${to}`}
             className={`inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400`}>
-            <CartIcon className="size-4" /> Shopping list for this week
+            <CartIcon className="size-4" /> Shopping list for {isThisWeek ? 'this week' : weekLabel}
           </Link>
         }>
         Week plan
@@ -65,9 +65,8 @@ export default function PlanPage() {
       <ErrorNotice message={error} />
       {loading && <Loading />}
 
-      {data && data.meals.length === 0 && (
-        <Welcome hasRecipes={data.recipes.length > 0}
-          onExample={() => run(() => addExampleData(weekStart), 'Example recipes added and planned')} />
+      {data && data.recipes.length === 0 && (
+        <Welcome onExample={() => run(() => addExampleData(weekStart), 'Example recipes added and planned')} />
       )}
 
       {data && (
@@ -87,22 +86,21 @@ export default function PlanPage() {
   )
 }
 
-// First-visit guide: explains the flow and offers example data to try it out.
-function Welcome({ hasRecipes, onExample }: { hasRecipes: boolean; onExample: () => Promise<boolean> }) {
+// First-visit guide, shown until the first recipe exists: explains the flow and offers example data.
+function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
   const [busy, setBusy] = useState(false)
   const steps = [
-    { icon: LeafIcon, title: 'Add ingredients', text: 'Tomatoes, pasta, rice…', to: '/ingredients' },
-    { icon: BookIcon, title: 'Create recipes', text: 'Combine ingredients with amounts.', to: '/recipes' },
+    { icon: BookIcon, title: 'Create a recipe', text: 'Name it and add what goes in it.', to: '/recipes' },
     { icon: CalendarIcon, title: 'Plan your week', text: 'Pick a recipe for each day below.', to: null },
     { icon: CartIcon, title: 'Go shopping', text: 'Get one list with everything added up.', to: '/shopping' },
   ]
 
   return (
     <Card className="mb-4 border-emerald-200 bg-linear-to-br from-emerald-50 to-white dark:border-emerald-900 dark:from-emerald-950/60 dark:to-stone-900">
-      <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Nothing planned this week yet</h3>
-      <p className="mt-1 text-stone-600 dark:text-stone-400">Here's how Meal Planner works:</p>
+      <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Welcome to Meal Planner</h3>
+      <p className="mt-1 text-stone-600 dark:text-stone-400">Here's how it works:</p>
 
-      <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="mt-4 grid gap-3 sm:grid-cols-3">
         {steps.map(({ icon: Icon, title, text, to }, i) => (
           <li key={title} className="flex gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-700 text-white dark:bg-emerald-500 dark:text-emerald-950">
@@ -125,7 +123,7 @@ function Welcome({ hasRecipes, onExample }: { hasRecipes: boolean; onExample: ()
           <SparklesIcon className="size-4" /> {busy ? 'Adding examples…' : 'Try it with example recipes'}
         </Button>
         <span className="text-sm text-stone-600 dark:text-stone-400">
-          {hasRecipes ? 'Adds 3 recipes and plans them this week.' : 'Adds 3 recipes with ingredients and plans them this week.'}
+          Adds 3 recipes with ingredients and plans them for the week below.
         </span>
       </div>
     </Card>
@@ -168,18 +166,25 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run 
       {meals.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {meals.map((m) => (
-            <li key={m.id} className="flex items-center gap-2 rounded-lg bg-stone-50 py-1 pr-1 pl-2.5 dark:bg-stone-800/60">
-              <span className="min-w-0 flex-1 font-medium break-words text-stone-900 dark:text-stone-100">{m.recipeName ?? '(unnamed)'}</span>
-              <CommitNumberInput label={`Servings of ${m.recipeName} on ${label}`} value={m.servings} min={1} max={100}
-                className="w-14 py-1"
-                onCommit={(servings) =>
-                  run(() => api.plannedMeals.update(m.id, { recipeId: m.recipeId, date: m.date, servings }),
-                    `${m.recipeName} on ${label}: ${servings} servings`)} />
-              <Button variant="ghost" className="px-1.5 text-stone-500 hover:text-red-700 dark:text-stone-400 dark:hover:text-red-400"
-                aria-label={`Remove ${m.recipeName} from ${label}`} title="Remove"
-                onClick={() => run(() => api.plannedMeals.remove(m.id), `${m.recipeName} removed from ${label}`)}>
-                <XIcon className="size-4" />
-              </Button>
+            <li key={m.id} className="rounded-lg bg-stone-50 py-1.5 pr-1 pl-2.5 dark:bg-stone-800/60">
+              <div className="flex items-start gap-2">
+                <span className="min-w-0 flex-1 font-medium break-words text-stone-900 dark:text-stone-100">{m.recipeName ?? '(unnamed)'}</span>
+                <Button variant="ghost" className="px-1.5 text-stone-500 hover:text-red-700 dark:text-stone-400 dark:hover:text-red-400"
+                  aria-label={`Remove ${m.recipeName} from ${label}`} title="Remove"
+                  onClick={() => run(() => api.plannedMeals.remove(m.id), `${m.recipeName} removed from ${label}`)}>
+                  <XIcon className="size-4" />
+                </Button>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <CommitNumberInput label={`Servings of ${m.recipeName} on ${label}`} value={m.servings} min={1} max={100}
+                  className="w-14 py-1"
+                  onCommit={(servings) =>
+                    run(() => api.plannedMeals.update(m.id, { recipeId: m.recipeId, date: m.date, servings }),
+                      `${m.recipeName} on ${label}: ${servings} servings`)} />
+                <span className="text-sm text-stone-600 dark:text-stone-400" aria-hidden="true">
+                  {m.servings === 1 ? 'serving' : 'servings'}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
