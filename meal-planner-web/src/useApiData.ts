@@ -41,5 +41,7 @@ export function useApiData<T>(loader: () => Promise<T>, deps: unknown[]) {
   )
 
   const loading = data === null && error === null
-  return { data, error, loading, run }
+  // Only once data has loaded: if the first load failed, the message is all the page has to show.
+  const dismissError = data === null ? undefined : () => setError(null)
+  return { data, error, loading, run, dismissError }
 }

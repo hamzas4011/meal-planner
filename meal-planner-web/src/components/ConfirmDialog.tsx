@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button } from './ui'
 
-type ConfirmOptions = { title: string; message?: string; confirmLabel?: string }
+// infoOnly: nothing to confirm, just explains why something can't be done. Shows a single OK.
+type ConfirmOptions = { title: string; message?: string; confirmLabel?: string; infoOnly?: boolean }
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>
 
 const ConfirmContext = createContext<ConfirmFn>(async () => false)
@@ -46,9 +47,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <h2 id="confirm-title" className="text-lg font-semibold text-stone-900 dark:text-stone-100">{options.title}</h2>
             {options.message && <p id="confirm-message" className="mt-2">{options.message}</p>}
             <div className="mt-5 flex justify-end gap-2">
-              {/* Cancel gets focus first: the safe choice if Enter is pressed by accident. */}
-              <Button autoFocus onClick={() => close(false)}>Cancel</Button>
-              <Button variant="dangerSolid" onClick={() => close(true)}>{options.confirmLabel ?? 'Delete'}</Button>
+              {options.infoOnly ? (
+                <Button autoFocus variant="primary" onClick={() => close(false)}>OK</Button>
+              ) : (
+                <>
+                  {/* Cancel gets focus first: the safe choice if Enter is pressed by accident. */}
+                  <Button autoFocus onClick={() => close(false)}>Cancel</Button>
+                  <Button variant="dangerSolid" onClick={() => close(true)}>{options.confirmLabel ?? 'Delete'}</Button>
+                </>
+              )}
             </div>
           </>
         )}

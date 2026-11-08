@@ -21,13 +21,40 @@ export default function PlanPage() {
   const to = toIso(addDays(weekStart, 6))
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
-  const { data, error, loading, run } = useApiData(
+  const { data, error, loading, run, dismissError } = useApiData(
     async () => {
       const [recipes, meals] = await Promise.all([api.recipes.list(), api.plannedMeals.list(from, to)])
       return { recipes, meals }
     },
     [from, to],
   )
+
+  // The last removed meal, offered back through the Undo bar until the user does something else.
+  const [removed, setRemoved] = useState<{ meal: PlannedMeal; dayLabel: string } | null>(null)
+
+  const runAndForgetUndo: Run = (action, success) => {
+    setRemoved(null)
+    return run(action, success)
+  }
+
+  async function removeMeal(meal: PlannedMeal, dayLabel: string) {
+    const ok = await run(() => api.plannedMeals.remove(meal.id), `${meal.recipeName} removed from ${dayLabel}. Undo is available.`)
+    if (ok) setRemoved({ meal, dayLabel })
+  }
+
+  // The Undo bar is about to disappear with focus inside it; keep keyboard users on the page.
+  function closeUndoBar() {
+    setRemoved(null)
+    document.getElementById('main')?.focus({ preventScroll: true })
+  }
+
+  function undoRemove() {
+    if (!removed) return
+    const { meal, dayLabel } = removed
+    closeUndoBar()
+    run(() => api.plannedMeals.create({ recipeId: meal.recipeId, date: meal.date, servings: meal.servings }),
+      `${meal.recipeName} put back on ${dayLabel}`)
+  }
 
   const goToWeek = (start: Date) => setParams({ week: toIso(start) })
   const today = toIso(new Date())
@@ -48,10 +75,10 @@ export default function PlanPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Button onClick={() => goToWeek(addDays(weekStart, -7))} aria-label="Previous week" title="Previous week" className="px-2">
+          <Button onClick={() => goToWeek(addDays(weekStart, -7))} aria-label="Previous week" title="Previous week" className="min-h-11 min-w-11 px-2">
             <ChevronLeftIcon />
           </Button>
-          <Button onClick={() => goToWeek(addDays(weekStart, 7))} aria-label="Next week" title="Next week" className="px-2">
+          <Button onClick={() => goToWeek(addDays(weekStart, 7))} aria-label="Next week" title="Next week" className="min-h-11 min-w-11 px-2">
             <ChevronRightIcon />
           </Button>
         </div>
@@ -62,7 +89,7 @@ export default function PlanPage() {
         {!isThisWeek && <Button variant="ghost" onClick={() => setParams({})}>Back to this week</Button>}
       </div>
 
-      <ErrorNotice message={error} />
+      <ErrorNotice message={error} onDismiss={dismissError} />
       {loading && <Loading />}
 
       {data && data.recipes.length === 0 && (
@@ -76,11 +103,27 @@ export default function PlanPage() {
             return (
               <li key={iso} className="flex">
                 <DayCard date={iso} weekday={formatWeekday(day)} dayMonth={formatDayMonth(day)} label={formatDay(day)}
-                  isToday={iso === today} meals={data.meals.filter((m) => m.date === iso)} recipes={data.recipes} run={run} />
+                  isToday={iso === today} meals={data.meals.filter((m) => m.date === iso)} recipes={data.recipes}
+                  run={runAndForgetUndo} onRemove={removeMeal} />
               </li>
             )
           })}
         </ul>
+      )}
+
+      {removed && (
+        // Sits above the phone tab bar, including the space iPhones reserve at the bottom.
+        <div className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md items-center gap-1 rounded-lg bg-stone-900 py-1 pr-1 pl-4 text-white shadow-lg sm:bottom-6 print:hidden dark:bg-stone-100 dark:text-stone-900">
+          <p className="min-w-0 flex-1 text-sm">{removed.meal.recipeName} removed from {removed.dayLabel}</p>
+          <Button key={removed.meal.id} autoFocus variant="ghost" onClick={undoRemove}
+            className="min-h-11 font-semibold text-emerald-300! hover:bg-white/10! dark:text-emerald-800! dark:hover:bg-stone-900/10!">
+            Undo
+          </Button>
+          <Button variant="ghost" aria-label="Dismiss" onClick={closeUndoBar}
+            className="min-h-11 min-w-11 text-stone-300! hover:bg-white/10! dark:text-stone-600! dark:hover:bg-stone-900/10!">
+            <XIcon className="size-4" />
+          </Button>
+        </div>
       )}
     </section>
   )
@@ -130,7 +173,7 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
   )
 }
 
-function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run }: {
+function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run, onRemove }: {
   date: string
   weekday: string
   dayMonth: string
@@ -139,6 +182,7 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run 
   meals: PlannedMeal[]
   recipes: Recipe[]
   run: Run
+  onRemove: (meal: PlannedMeal, dayLabel: string) => void
 }) {
   const [adding, setAdding] = useState(false)
   const addButton = useRef<HTMLButtonElement>(null)
@@ -167,23 +211,21 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run 
         <ul className="flex flex-col gap-1.5">
           {meals.map((m) => (
             <li key={m.id} className="rounded-lg bg-stone-50 py-1.5 pr-1 pl-2.5 dark:bg-stone-800/60">
-              <div className="flex items-start gap-2">
-                <span className="min-w-0 flex-1 font-medium break-words text-stone-900 dark:text-stone-100">{m.recipeName ?? '(unnamed)'}</span>
-                <Button variant="ghost" className="px-1.5 text-stone-500 hover:text-red-700 dark:text-stone-400 dark:hover:text-red-400"
-                  aria-label={`Remove ${m.recipeName} from ${label}`} title="Remove"
-                  onClick={() => run(() => api.plannedMeals.remove(m.id), `${m.recipeName} removed from ${label}`)}>
-                  <XIcon className="size-4" />
-                </Button>
-              </div>
+              <p className="font-medium break-words text-stone-900 dark:text-stone-100">{m.recipeName ?? '(unnamed)'}</p>
               <div className="mt-1 flex items-center gap-2">
                 <CommitNumberInput label={`Servings of ${m.recipeName} on ${label}`} value={m.servings} min={1} max={100}
                   className="w-14 py-1"
                   onCommit={(servings) =>
                     run(() => api.plannedMeals.update(m.id, { recipeId: m.recipeId, date: m.date, servings }),
                       `${m.recipeName} on ${label}: ${servings} servings`)} />
-                <span className="text-sm text-stone-600 dark:text-stone-400" aria-hidden="true">
+                <span className="flex-1 text-sm text-stone-600 dark:text-stone-400" aria-hidden="true">
                   {m.servings === 1 ? 'serving' : 'servings'}
                 </span>
+                <Button variant="ghost" className="min-h-11 min-w-11 px-1.5 text-stone-500 hover:text-red-700 dark:text-stone-400 dark:hover:text-red-400"
+                  aria-label={`Remove ${m.recipeName} from ${label}`} title="Remove"
+                  onClick={() => onRemove(m, label)}>
+                  <XIcon className="size-4" />
+                </Button>
               </div>
             </li>
           ))}

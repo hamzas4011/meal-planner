@@ -30,7 +30,7 @@ export default function ShoppingPage() {
   const to = toIso(fromIso(params.get('to')) ?? addDays(monday, 6))
   const storageKey = `shopping-checked:${from}:${to}`
 
-  const { data: items, error, loading } = useApiData(() => api.shoppingList.get(from, to), [from, to])
+  const { data: items, error, loading, dismissError } = useApiData(() => api.shoppingList.get(from, to), [from, to])
   const [checked, setChecked] = useState<Set<string>>(() => loadChecked(storageKey))
   const [rangeError, setRangeError] = useState<string | null>(null)
 
@@ -90,7 +90,7 @@ export default function ShoppingPage() {
         )}
       </Card>
 
-      <ErrorNotice message={error} />
+      <ErrorNotice message={error} onDismiss={dismissError} />
       {loading && <Loading />}
 
       {items && items.length > 0 && (

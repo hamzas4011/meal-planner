@@ -1,18 +1,21 @@
 import { useRef, useState } from 'react'
 import { api, type Ingredient, type Recipe } from '../api'
 import {
-  Button, Card, CommitNumberInput, CommitTextInput, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle,
+  Button, Card, CommitNumberInput, CommitTextInput, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle, summarize,
 } from '../components/ui'
 import { useConfirm } from '../components/ConfirmDialog'
+import { formatDay, fromIso } from '../dates'
 import { useApiData } from '../useApiData'
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>
 
 export default function RecipesPage() {
-  const { data, error, loading, run } = useApiData(
+  const { data, error, loading, run, dismissError } = useApiData(
     async () => {
-      const [recipes, ingredients] = await Promise.all([api.recipes.list(), api.ingredients.list()])
-      return { recipes, ingredients }
+      const [recipes, ingredients, meals] = await Promise.all([
+        api.recipes.list(), api.ingredients.list(), api.plannedMeals.list(),
+      ])
+      return { recipes, ingredients, meals }
     },
     [],
   )
@@ -48,14 +51,15 @@ export default function RecipesPage() {
         </form>
       </Card>
 
-      <ErrorNotice message={error} />
+      <ErrorNotice message={error} onDismiss={dismissError} />
       {loading && <Loading />}
 
       {data && (
         <div className="grid gap-3">
           {data.recipes.length === 0 && <Empty>No recipes yet. Create one above.</Empty>}
           {data.recipes.map((r) => (
-            <RecipeCard key={r.id} recipe={r} allIngredients={data.ingredients} isNew={r.id === newRecipeId} run={run} />
+            <RecipeCard key={r.id} recipe={r} allIngredients={data.ingredients} isNew={r.id === newRecipeId} run={run}
+              plannedDates={data.meals.filter((m) => m.recipeId === r.id).map((m) => m.date)} />
           ))}
         </div>
       )}
@@ -63,10 +67,11 @@ export default function RecipesPage() {
   )
 }
 
-function RecipeCard({ recipe, allIngredients, isNew, run }: {
+function RecipeCard({ recipe, allIngredients, isNew, plannedDates, run }: {
   recipe: Recipe
   allIngredients: Ingredient[]
   isNew: boolean
+  plannedDates: string[]
   run: Run
 }) {
   const [editing, setEditing] = useState(isNew)
@@ -78,6 +83,20 @@ function RecipeCard({ recipe, allIngredients, isNew, run }: {
     setEditing(false)
     // Put focus back on the Edit button, so keyboard users don't get lost.
     setTimeout(() => editButton.current?.focus())
+  }
+
+  async function deleteRecipe() {
+    if (plannedDates.length > 0) {
+      const days = [...new Set(plannedDates)].map((d) => formatDay(fromIso(d)!))
+      await confirm({
+        title: `Can't delete "${title}" yet`,
+        message: `It's in your week plan on ${summarize(days)}. Remove it from the plan first.`,
+        infoOnly: true,
+      })
+      return
+    }
+    if (await confirm({ title: `Delete "${title}"?`, message: 'The recipe and its ingredient list will be removed.' }))
+      run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)
   }
 
   return (
@@ -94,11 +113,7 @@ function RecipeCard({ recipe, allIngredients, isNew, run }: {
                 <span className="font-normal text-stone-500 dark:text-stone-400"> · serves {recipe.servings}</span>
               </h3>
               <Button ref={editButton} aria-label={`Edit recipe ${title}`} onClick={() => setEditing(true)}>Edit</Button>
-              <Button variant="danger" aria-label={`Delete recipe ${title}`}
-                onClick={async () => {
-                  if (await confirm({ title: `Delete "${title}"?`, message: 'The recipe and its ingredient list will be removed.' }))
-                    run(() => api.recipes.remove(recipe.id), `Recipe ${title} deleted`)
-                }}>
+              <Button variant="danger" aria-label={`Delete recipe ${title}`} onClick={deleteRecipe}>
                 Delete
               </Button>
             </div>

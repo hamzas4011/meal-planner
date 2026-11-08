@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type Ref } from 'react'
+import { XIcon } from './icons'
 
 // focus-visible: show the focus ring for keyboard users, not on every mouse click.
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600'
 
+// text-base (16px) matters: iPhones zoom the whole page when a field with smaller text gets focus.
 export const inputClass =
-  `rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-stone-900 ${focusRing} ` +
+  `rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-base text-stone-900 ${focusRing} ` +
   'dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100'
 
 const buttonVariants = {
@@ -93,13 +95,28 @@ export function Field({ label, children, className = '' }: { label: string; chil
   )
 }
 
-export function ErrorNotice({ message }: { message: string | null }) {
+// Fixed under the header, so it is seen even when the action happened far down the page.
+export function ErrorNotice({ message, onDismiss }: { message: string | null; onDismiss?: () => void }) {
   if (!message) return null
   return (
-    <p role="alert" className="my-3 rounded-md bg-red-50 px-3 py-2 text-red-700 print:hidden dark:bg-red-950 dark:text-red-300">
-      {message}
-    </p>
+    <div role="alert" className="fixed inset-x-4 top-20 z-30 mx-auto flex max-w-lg items-start gap-1 rounded-lg border border-red-200 bg-red-50 py-1 pr-1 pl-3 text-red-700 shadow-lg print:hidden dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+      <p className="min-w-0 flex-1 py-2">{message}</p>
+      {onDismiss && (
+        <Button variant="ghost" className="min-h-11 min-w-11 text-red-700! dark:text-red-300!" aria-label="Dismiss message" onClick={onDismiss}>
+          <XIcon className="size-4" />
+        </Button>
+      )}
+    </div>
   )
+}
+
+// "A", "A and B", "A, B and C", "A, B and 2 more": keeps messages short when a list is long.
+export function summarize(items: string[], max = 3) {
+  const shown = items.slice(0, max)
+  const extra = items.length - shown.length
+  if (extra > 0) return `${shown.join(', ')} and ${extra} more`
+  if (shown.length < 2) return shown.join('')
+  return `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
 }
 
 // Helpful hint (not an error), e.g. "create a recipe first".

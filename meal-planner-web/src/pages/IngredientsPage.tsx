@@ -1,11 +1,18 @@
 import { useRef, useState } from 'react'
 import { api, type Ingredient } from '../api'
-import { Button, Card, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle } from '../components/ui'
+import { Button, Card, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle, summarize } from '../components/ui'
 import { useConfirm } from '../components/ConfirmDialog'
 import { useApiData } from '../useApiData'
 
 export default function IngredientsPage() {
-  const { data: ingredients, error, loading, run } = useApiData(() => api.ingredients.list(), [])
+  const { data, error, loading, run, dismissError } = useApiData(
+    async () => {
+      const [ingredients, recipes] = await Promise.all([api.ingredients.list(), api.recipes.list()])
+      return { ingredients, recipes }
+    },
+    [],
+  )
+  const ingredients = data?.ingredients
   const [name, setName] = useState('')
   const [unit, setUnit] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -21,6 +28,23 @@ export default function IngredientsPage() {
       setUnit('')
       nameInput.current?.focus() // ready for the next one
     }
+  }
+
+  async function deleteIngredient(ingredient: Ingredient) {
+    const usedIn = (data?.recipes ?? [])
+      .filter((r) => r.ingredients.some((ri) => ri.ingredientId === ingredient.id))
+      .map((r) => r.name ?? '(unnamed)')
+
+    if (usedIn.length > 0) {
+      await confirm({
+        title: `Can't delete "${ingredient.name}" yet`,
+        message: `It's used in ${summarize(usedIn)}. Remove it from ${usedIn.length === 1 ? 'that recipe' : 'those recipes'} first.`,
+        infoOnly: true,
+      })
+      return
+    }
+    if (await confirm({ title: `Delete "${ingredient.name}"?`, message: 'It will be removed from your ingredient list.' }))
+      run(() => api.ingredients.remove(ingredient.id), `${ingredient.name} deleted`)
   }
 
   const query = search.trim().toLowerCase()
@@ -44,7 +68,7 @@ export default function IngredientsPage() {
         </form>
       </Card>
 
-      <ErrorNotice message={error} />
+      <ErrorNotice message={error} onDismiss={dismissError} />
       {loading && <Loading />}
 
       {ingredients && ingredients.length > 5 && (
@@ -70,11 +94,7 @@ export default function IngredientsPage() {
                   {i.unit && <span className="text-stone-500 dark:text-stone-400"> ({i.unit})</span>}
                 </span>
                 <Button aria-label={`Edit ${i.name}`} onClick={() => setEditingId(i.id)}>Edit</Button>
-                <Button variant="danger" aria-label={`Delete ${i.name}`}
-                  onClick={async () => {
-                    if (await confirm({ title: `Delete "${i.name}"?`, message: 'It will be removed from your ingredient list.' }))
-                      run(() => api.ingredients.remove(i.id), `${i.name} deleted`)
-                  }}>
+                <Button variant="danger" aria-label={`Delete ${i.name}`} onClick={() => deleteIngredient(i)}>
                   Delete
                 </Button>
               </li>

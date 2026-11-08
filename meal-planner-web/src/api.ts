@@ -91,7 +91,9 @@ export const api = {
   },
 
   plannedMeals: {
-    list: (from: string, to: string) => request<PlannedMeal[]>('GET', `/plannedmeals?from=${from}&to=${to}`),
+    // Without a range, returns every planned meal.
+    list: (from?: string, to?: string) =>
+      request<PlannedMeal[]>('GET', from && to ? `/plannedmeals?from=${from}&to=${to}` : '/plannedmeals'),
     create: (dto: { recipeId: number; date: string; servings: number }) =>
       request<PlannedMeal>('POST', '/plannedmeals', dto),
     update: (id: number, dto: { recipeId: number; date: string; servings: number }) =>
