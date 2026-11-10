@@ -1,0 +1,42 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: meal-planner-web/package-lock.json
+
+      - name: Build React
+        working-directory: meal-planner-web
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish API
+        run: dotnet publish MealPlanner.Api -c Release -o publish
+
+      - name: Copy React build into wwwroot
+        run: |
+          mkdir -p publish/wwwroot
+          cp -r meal-planner-web/dist/* publish/wwwroot/
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: meal-planner
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: publish
