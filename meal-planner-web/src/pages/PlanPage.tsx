@@ -97,7 +97,7 @@ export default function PlanPage() {
       )}
 
       {data && (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={`Days, ${weekLabel}`}>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={`Week, ${weekLabel}`}>
           {days.map((day) => {
             const iso = toIso(day)
             return (
@@ -108,6 +108,10 @@ export default function PlanPage() {
               </li>
             )
           })}
+          {/* 7 days leave one empty spot in the 2- and 4-column grids; a summary fills it. */}
+          <li className="flex">
+            <WeekSummary meals={data.meals} shoppingLink={`/shopping?from=${from}&to=${to}`} />
+          </li>
         </ul>
       )}
 
@@ -133,8 +137,8 @@ export default function PlanPage() {
 function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
   const [busy, setBusy] = useState(false)
   const steps = [
-    { icon: BookIcon, title: 'Create a recipe', text: 'Name it and add what goes in it.', to: '/recipes' },
-    { icon: CalendarIcon, title: 'Plan your week', text: 'Pick a recipe for each day below.', to: null },
+    { icon: CalendarIcon, title: 'Plan your week', text: 'Press "Add meal" on a day and type what you’ll eat.', to: null },
+    { icon: BookIcon, title: 'Add ingredients', text: 'Say what goes into each recipe.', to: '/recipes' },
     { icon: CartIcon, title: 'Go shopping', text: 'Get one list with everything added up.', to: '/shopping' },
   ]
 
@@ -169,6 +173,34 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
           Adds 7 recipes with ingredients and plans a dinner for every day of the week below.
         </span>
       </div>
+    </Card>
+  )
+}
+
+function WeekSummary({ meals, shoppingLink }: { meals: PlannedMeal[]; shoppingLink: string }) {
+  const plannedDays = new Set(meals.map((m) => m.date)).size
+  const servings = meals.reduce((sum, m) => sum + m.servings, 0)
+  const stats = [
+    { value: meals.length, label: meals.length === 1 ? 'meal planned' : 'meals planned' },
+    { value: `${plannedDays}/7`, label: 'days covered' },
+    { value: servings, label: servings === 1 ? 'serving' : 'servings' },
+  ]
+
+  return (
+    <Card className="flex w-full flex-col gap-3 border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/40">
+      <h3 className="font-semibold text-stone-900 dark:text-stone-100">This week</h3>
+      <dl className="grid gap-1.5">
+        {stats.map(({ value, label }) => (
+          <div key={label} className="flex items-baseline gap-2">
+            <dt className="sr-only">{label}</dt>
+            <dd className="text-lg font-semibold text-emerald-800 tabular-nums dark:text-emerald-300">{value}</dd>
+            <span className="text-sm text-stone-600 dark:text-stone-400" aria-hidden="true">{label}</span>
+          </div>
+        ))}
+      </dl>
+      <Link to={shoppingLink} className={`mt-auto inline-flex items-center gap-2 text-sm font-medium ${linkClass}`}>
+        <CartIcon className="size-4" /> {meals.length > 0 ? 'See what to buy' : 'Plan a meal to get a list'}
+      </Link>
     </Card>
   )
 }
@@ -212,6 +244,12 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run,
           {meals.map((m) => (
             <li key={m.id} className="rounded-lg bg-stone-50 py-1.5 pr-1 pl-2.5 dark:bg-stone-800/60">
               <p className="font-medium break-words text-stone-900 dark:text-stone-100">{m.recipeName ?? '(unnamed)'}</p>
+              {/* A recipe created from here has no ingredients yet, so it can't reach the shopping list. */}
+              {recipes.find((r) => r.id === m.recipeId)?.ingredients.length === 0 && (
+                <Link to={`/recipes?edit=${m.recipeId}`} className={`text-sm ${linkClass}`}>
+                  No ingredients yet – add them
+                </Link>
+              )}
               <div className="mt-1 flex items-center gap-2">
                 <CommitNumberInput label={`Servings of ${m.recipeName} on ${label}`} value={m.servings} min={1} max={100}
                   className="w-14 py-1"
@@ -235,13 +273,11 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run,
       <div className="mt-auto">
         {adding ? (
           <AddMealForm date={date} dayLabel={label} recipes={recipes} run={run} onDone={stopAdding} />
-        ) : recipes.length > 0 ? (
+        ) : (
           <Button ref={addButton} variant="ghost" className="w-full justify-start border-dashed border-stone-300! dark:border-stone-700!"
             aria-label={`Add meal on ${label}`} onClick={() => setAdding(true)}>
             <PlusIcon className="size-4" /> Add meal
           </Button>
-        ) : (
-          meals.length === 0 && <p className="text-sm text-stone-500 dark:text-stone-400">Nothing planned</p>
         )}
       </div>
     </Card>
@@ -256,29 +292,45 @@ function AddMealForm({ date, dayLabel, recipes, run, onDone }: {
   onDone: () => void
 }) {
   const [recipeId, setRecipeId] = useState('')
+  const [newName, setNewName] = useState('')
   const [servings, setServings] = useState(2)
+  // With no recipes yet, typing a new one is the only option.
+  const creating = recipeId === NEW_RECIPE || recipes.length === 0
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
-    const recipe = recipes.find((r) => r.id === Number(recipeId))
-    if (await run(() => api.plannedMeals.create({ recipeId: Number(recipeId), date, servings }),
-      `${recipe?.name} added to ${dayLabel}`)) onDone()
+    const name = creating ? newName.trim() : recipes.find((r) => r.id === Number(recipeId))?.name
+    // A new recipe is created and planned in one go; its ingredients can be added later.
+    if (await run(async () => {
+      const id = creating ? (await api.recipes.create({ name: newName.trim(), servings })).id : Number(recipeId)
+      await api.plannedMeals.create({ recipeId: id, date, servings })
+    }, `${name} added to ${dayLabel}`)) onDone()
   }
 
   return (
     <form onSubmit={add} onKeyDown={(e) => e.key === 'Escape' && onDone()} className="flex flex-col gap-2">
-      <select className={inputClass} aria-label={`Meal to add on ${dayLabel}`} required value={recipeId} autoFocus
-        onChange={(e) => {
-          setRecipeId(e.target.value)
-          // Default to the recipe's own serving count.
-          const recipe = recipes.find((r) => r.id === Number(e.target.value))
-          if (recipe) setServings(recipe.servings)
-        }}>
-        <option value="">Choose a recipe…</option>
-        {recipes.map((r) => (
-          <option key={r.id} value={r.id}>{r.name ?? '(unnamed)'}</option>
-        ))}
-      </select>
+      {recipes.length > 0 && (
+        <select className={inputClass} aria-label={`Meal to add on ${dayLabel}`} required value={recipeId} autoFocus
+          onChange={(e) => {
+            setRecipeId(e.target.value)
+            // Default to the recipe's own serving count.
+            const recipe = recipes.find((r) => r.id === Number(e.target.value))
+            if (recipe) setServings(recipe.servings)
+          }}>
+          <option value="">Choose a recipe…</option>
+          <option value={NEW_RECIPE}>+ New recipe…</option>
+          {recipes.map((r) => (
+            <option key={r.id} value={r.id}>{r.name ?? '(unnamed)'}</option>
+          ))}
+        </select>
+      )}
+      {creating && (
+        <label className="flex flex-col gap-1 text-sm">
+          New recipe name
+          <input className={inputClass} placeholder="e.g. Tacos" required maxLength={200} autoFocus
+            value={newName} onChange={(e) => setNewName(e.target.value)} />
+        </label>
+      )}
       <label className="flex items-center gap-2 text-sm">
         Servings
         <input type="number" inputMode="numeric" className={`${inputClass} w-16`}
@@ -288,7 +340,8 @@ function AddMealForm({ date, dayLabel, recipes, run, onDone }: {
         <Button type="submit" variant="primary" className="flex-1">Add</Button>
         <Button onClick={onDone} className="flex-1">Cancel</Button>
       </div>
-      <Link to="/recipes" className={`text-sm ${linkClass}`}>Not in the list? Create a new recipe</Link>
     </form>
   )
 }
+
+const NEW_RECIPE = 'new'

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { api, type Ingredient, type Recipe } from '../api'
 import { XIcon } from '../components/icons'
 import {
@@ -24,8 +24,10 @@ export default function RecipesPage() {
   )
   const [name, setName] = useState('')
   const [servings, setServings] = useState(2)
-  // A recipe that was just created opens ready for its ingredients.
-  const [newRecipeId, setNewRecipeId] = useState<number | null>(null)
+  // A recipe that was just created opens ready for its ingredients. The week plan links here
+  // with ?edit=<id> for a recipe that was created there without ingredients.
+  const [params] = useSearchParams()
+  const [newRecipeId, setNewRecipeId] = useState<number | null>(() => Number(params.get('edit')) || null)
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
