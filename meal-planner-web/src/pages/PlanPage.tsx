@@ -166,7 +166,7 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
           <SparklesIcon className="size-4" /> {busy ? 'Adding examples…' : 'Try it with example recipes'}
         </Button>
         <span className="text-sm text-stone-600 dark:text-stone-400">
-          Adds 3 recipes with ingredients and plans them for the week below.
+          Adds 7 recipes with ingredients and plans a dinner for every day of the week below.
         </span>
       </div>
     </Card>
@@ -288,6 +288,7 @@ function AddMealForm({ date, dayLabel, recipes, run, onDone }: {
         <Button type="submit" variant="primary" className="flex-1">Add</Button>
         <Button onClick={onDone} className="flex-1">Cancel</Button>
       </div>
+      <Link to="/recipes" className={`text-sm ${linkClass}`}>Not in the list? Create a new recipe</Link>
     </form>
   )
 }

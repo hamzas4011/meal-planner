@@ -32,7 +32,7 @@ export default function ShoppingPage() {
 
   const { data: items, error, loading, dismissError } = useApiData(() => api.shoppingList.get(from, to), [from, to])
   const [checked, setChecked] = useState<Set<string>>(() => loadChecked(storageKey))
-  const [rangeError, setRangeError] = useState<string | null>(null)
+  const setRange = (newFrom: string, newTo: string) => setParams({ from: newFrom, to: newTo }, { replace: true })
 
   useEffect(() => setChecked(loadChecked(storageKey)), [storageKey])
 
@@ -60,36 +60,19 @@ export default function ShoppingPage() {
       <PageTitle description="Everything you need for the planned meals, added up.">Shopping list</PageTitle>
 
       <Card className="mb-3 print:hidden">
-        <form className="flex flex-wrap items-end gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            const newFrom = String(form.get('from'))
-            const newTo = String(form.get('to'))
-            // Check here so the user gets a clear message next to the dates.
-            if (newFrom > newTo) {
-              setRangeError('"From" must be on or before "To".')
-              return
-            }
-            setRangeError(null)
-            setParams({ from: newFrom, to: newTo })
-          }}>
+        {/* The list updates as soon as a date changes. If the range would end before it starts,
+            the other date moves along, so the range is always valid. */}
+        <div className="flex flex-wrap items-end gap-3">
           <Field label="From" className="min-w-36 flex-1 sm:flex-none">
-            <input type="date" name="from" required defaultValue={from} key={`from-${from}`} className={inputClass}
-              aria-describedby={rangeError ? 'range-error' : undefined} aria-invalid={rangeError ? true : undefined} />
+            <input type="date" required value={from} className={inputClass}
+              onChange={(e) => e.target.value && setRange(e.target.value, e.target.value > to ? e.target.value : to)} />
           </Field>
           <Field label="To" className="min-w-36 flex-1 sm:flex-none">
-            <input type="date" name="to" required defaultValue={to} key={`to-${to}`} className={inputClass}
-              aria-describedby={rangeError ? 'range-error' : undefined} aria-invalid={rangeError ? true : undefined} />
+            <input type="date" required value={to} className={inputClass}
+              onChange={(e) => e.target.value && setRange(e.target.value < from ? e.target.value : from, e.target.value)} />
           </Field>
-          <div className="flex w-full gap-2 sm:w-auto">
-            <Button type="submit" variant="primary" className="flex-1 sm:flex-none">Show list</Button>
-            <Button onClick={() => window.print()} className="flex-1 sm:flex-none"><PrinterIcon className="size-4" /> Print</Button>
-          </div>
-        </form>
-        {rangeError && (
-          <p id="range-error" role="alert" className="mt-2 text-red-700 dark:text-red-300">{rangeError}</p>
-        )}
+          <Button onClick={() => window.print()} className="w-full sm:w-auto"><PrinterIcon className="size-4" /> Print</Button>
+        </div>
       </Card>
 
       <ErrorNotice message={error} onDismiss={dismissError} />

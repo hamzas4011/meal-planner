@@ -14,6 +14,14 @@ const ingredients = [
   { name: 'Tortilla', unit: 'pcs' },
   { name: 'Lettuce', unit: 'pcs' },
   { name: 'Cheese', unit: 'g' },
+  { name: 'Chickpeas', unit: 'g' },
+  { name: 'Coconut milk', unit: 'ml' },
+  { name: 'Curry paste', unit: 'g' },
+  { name: 'Salmon', unit: 'g' },
+  { name: 'Potato', unit: 'g' },
+  { name: 'Cream', unit: 'ml' },
+  { name: 'Bread', unit: 'pcs' },
+  { name: 'Pizza dough', unit: 'pcs' },
 ]
 
 const recipes = [
@@ -28,6 +36,22 @@ const recipes = [
   {
     name: 'Tacos', servings: 4, day: 4,
     items: { Tortilla: 8, 'Minced beef': 400, Tomato: 2, Lettuce: 1, Cheese: 150, Onion: 1 },
+  },
+  {
+    name: 'Chickpea curry', servings: 4, day: 1,
+    items: { Chickpeas: 400, 'Coconut milk': 400, 'Curry paste': 50, Onion: 1, Garlic: 2, Rice: 300 },
+  },
+  {
+    name: 'Salmon with potatoes', servings: 2, day: 3,
+    items: { Salmon: 300, Potato: 500, Broccoli: 200 },
+  },
+  {
+    name: 'Tomato soup', servings: 4, day: 5,
+    items: { Tomato: 8, Onion: 1, Garlic: 2, Cream: 100, Bread: 4 },
+  },
+  {
+    name: 'Homemade pizza', servings: 2, day: 6,
+    items: { 'Pizza dough': 2, Tomato: 3, Cheese: 200, Onion: 1 },
   },
 ]
 

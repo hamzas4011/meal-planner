@@ -10,11 +10,11 @@ import ShoppingPage from './pages/ShoppingPage'
 
 type NavItem = { to: string; label: string; short: string; icon: ComponentType<SVGProps<SVGSVGElement>> }
 
-// Ordered like the workflow: plan the week, then shop. Recipes and ingredients feed the plan.
+// Ordered like the workflow: plan the week, then shop. Ingredients are managed from the
+// Recipes page (and created inside recipes), so they don't need their own tab.
 const links: NavItem[] = [
   { to: '/plan', label: 'Week plan', short: 'Plan', icon: CalendarIcon },
   { to: '/recipes', label: 'Recipes', short: 'Recipes', icon: BookIcon },
-  { to: '/ingredients', label: 'Ingredients', short: 'Ingredients', icon: LeafIcon },
   { to: '/shopping', label: 'Shopping list', short: 'Shopping', icon: CartIcon },
 ]
 
@@ -91,7 +91,7 @@ export default function App() {
 
       {/* Phone navigation: a bottom tab bar, within easy reach of the thumb. */}
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden dark:border-stone-800 dark:bg-stone-950">
-        <ul className="grid grid-cols-4">
+        <ul className="grid grid-cols-3">
           {links.map(({ to, short, icon: Icon }) => (
             <li key={to}>
               <NavLink to={linkTarget(to, pathname, params)}

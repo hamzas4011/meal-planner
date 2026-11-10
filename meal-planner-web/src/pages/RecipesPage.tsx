@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { api, type Ingredient, type Recipe } from '../api'
+import { XIcon } from '../components/icons'
 import {
-  Button, Card, CommitNumberInput, CommitTextInput, Empty, ErrorNotice, Field, inputClass, Loading, PageTitle, summarize,
+  Button, Card, CommitNumberInput, CommitTextInput, Empty, ErrorNotice, Field, inputClass, linkClass, Loading, PageTitle,
+  summarize,
 } from '../components/ui'
 import { useConfirm } from '../components/ConfirmDialog'
 import { formatDay, fromIso } from '../dates'
@@ -35,7 +38,10 @@ export default function RecipesPage() {
 
   return (
     <section>
-      <PageTitle description="Your recipes and what goes into them.">Recipes</PageTitle>
+      <PageTitle description="Your recipes and what goes into them."
+        actions={<Link to="/ingredients" className={linkClass}>Manage ingredients</Link>}>
+        Recipes
+      </PageTitle>
 
       <Card className="mb-3">
         <form onSubmit={create} className="flex flex-wrap items-end gap-2">
@@ -175,9 +181,11 @@ function RecipeEditor({ recipe, allIngredients, focusIngredient, run, onDone }: 
                   run(() => api.recipes.updateIngredient(recipe.id, ri.id, { ingredientId: ri.ingredientId, quantity }),
                     `${ri.ingredientName} updated to ${quantity}${ri.unit ? ` ${ri.unit}` : ''}`)} />
               <span className="w-14 text-stone-500 dark:text-stone-400" aria-hidden="true">{ri.unit}</span>
-              <Button variant="danger" aria-label={`Remove ${ri.ingredientName} from ${title}`}
+              <Button variant="ghost" title="Remove"
+                className="min-h-11 min-w-11 px-1.5 text-stone-500 hover:text-red-700 dark:text-stone-400 dark:hover:text-red-400"
+                aria-label={`Remove ${ri.ingredientName} from ${title}`}
                 onClick={() => run(() => api.recipes.removeIngredient(recipe.id, ri.id), `${ri.ingredientName} removed`)}>
-                Remove
+                <XIcon className="size-4" />
               </Button>
             </li>
           ))}
