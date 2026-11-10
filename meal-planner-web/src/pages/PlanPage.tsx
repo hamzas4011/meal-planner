@@ -56,6 +56,15 @@ export default function PlanPage() {
       `${meal.recipeName} put back on ${dayLabel}`)
   }
 
+  // The example card disappears once the week is filled, with focus inside it. Move focus to the
+  // filled week, so keyboard and screen-reader users land on what was just planned.
+  const weekList = useRef<HTMLUListElement>(null)
+  async function fillWithExamples() {
+    const ok = await runAndForgetUndo(() => addExampleData(weekStart), 'Example week planned: a dinner for every day')
+    if (ok) setTimeout(() => weekList.current?.focus())
+    return ok
+  }
+
   const goToWeek = (start: Date) => setParams({ week: toIso(start) })
   const today = toIso(new Date())
   const isThisWeek = from === toIso(startOfWeek(new Date()))
@@ -63,7 +72,7 @@ export default function PlanPage() {
 
   return (
     <section>
-      <PageTitle description="Plan what you'll eat each day of the week."
+      <PageTitle description="Plan your meals for the week. The shopping list adds up everything you need."
         actions={
           <Link to={`/shopping?from=${from}&to=${to}`}
             className={`inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 font-medium sm:w-auto text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400`}>
@@ -92,14 +101,16 @@ export default function PlanPage() {
       <ErrorNotice message={error} onDismiss={dismissError} />
       {loading && <Loading />}
 
-      {data && data.recipes.length === 0 && (
-        <Welcome onExample={() => run(() => addExampleData(weekStart), 'Example recipes added and planned')} />
-      )}
+      {data && data.recipes.length === 0 && <Welcome onExample={fillWithExamples} />}
+
+      {/* Any later empty week can be filled in one click too, so a visitor always sees the full flow. */}
+      {data && data.recipes.length > 0 && data.meals.length === 0 && <EmptyWeekBar onExample={fillWithExamples} />}
 
       {data && (
         // Every row as tall as the tallest one, so the grid looks even. Not on phones (one column),
         // where empty days would just become tall blank boxes.
-        <ul className="grid grid-cols-1 gap-3 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-4" aria-label={`Week, ${weekLabel}`}>
+        <ul ref={weekList} tabIndex={-1} className="grid grid-cols-1 gap-3 outline-none sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-4"
+          aria-label={`Week, ${weekLabel}`}>
           {days.map((day) => {
             const iso = toIso(day)
             return (
@@ -135,9 +146,19 @@ export default function PlanPage() {
   )
 }
 
-// First-visit guide, shown until the first recipe exists: explains the flow and offers example data.
-function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
+// The same big, clearly worded button everywhere examples are offered.
+function ExampleButton({ onExample }: { onExample: () => Promise<boolean> }) {
   const [busy, setBusy] = useState(false)
+  return (
+    <Button variant="primary" className="w-full sm:w-auto" disabled={busy} aria-busy={busy}
+      onClick={async () => { setBusy(true); await onExample(); setBusy(false) }}>
+      <SparklesIcon className="size-4" /> {busy ? 'Adding examples…' : 'Try an example week'}
+    </Button>
+  )
+}
+
+// First-visit guide, shown until the first recipe exists: the example comes first, then the steps.
+function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
   const steps = [
     { icon: CalendarIcon, title: 'Plan your week', text: 'Press "Add meal" on a day and type what you’ll eat.', to: null },
     { icon: BookIcon, title: 'Add ingredients', text: 'Say what goes into each recipe.', to: '/recipes' },
@@ -146,10 +167,18 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
 
   return (
     <Card className="mb-4 border-emerald-200 bg-linear-to-br from-emerald-50 to-white dark:border-emerald-900 dark:from-emerald-950/60 dark:to-stone-900">
-      <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Welcome to Meal Planner</h3>
-      <p className="mt-1 text-stone-600 dark:text-stone-400">Here's how it works:</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Welcome to Meal Planner</h3>
+          <p className="text-stone-600 dark:text-stone-400">See how it works with one click.</p>
+        </div>
+        <ExampleButton onExample={onExample} />
+      </div>
 
-      <ol className="mt-4 grid gap-3 sm:grid-cols-3">
+      <p className="mt-4 border-t border-emerald-200/70 pt-3 text-sm text-stone-600 dark:border-emerald-900 dark:text-stone-400">
+        Or start yourself:
+      </p>
+      <ol className="mt-3 grid gap-3 sm:grid-cols-3">
         {steps.map(({ icon: Icon, title, text, to }, i) => (
           <li key={title} className="flex gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-700 text-white dark:bg-emerald-500 dark:text-emerald-950">
@@ -165,17 +194,21 @@ function Welcome({ onExample }: { onExample: () => Promise<boolean> }) {
           </li>
         ))}
       </ol>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-emerald-200/70 pt-4 dark:border-emerald-900">
-        <Button variant="primary" className="w-full sm:w-auto" disabled={busy} aria-busy={busy}
-          onClick={async () => { setBusy(true); await onExample(); setBusy(false) }}>
-          <SparklesIcon className="size-4" /> {busy ? 'Adding examples…' : 'Try it with example recipes'}
-        </Button>
-        <span className="text-sm text-stone-600 dark:text-stone-400">
-          Adds 7 recipes with ingredients and plans a dinner for every day of the week below.
-        </span>
-      </div>
     </Card>
+  )
+}
+
+// Shown on any empty week once recipes exist.
+function EmptyWeekBar({ onExample }: { onExample: () => Promise<boolean> }) {
+  return (
+    <section aria-labelledby="example-week-title"
+      className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-sm dark:border-emerald-900 dark:from-emerald-950/60 dark:to-stone-900">
+      <div className="min-w-0 flex-1">
+        <h3 id="example-week-title" className="font-semibold text-stone-900 dark:text-stone-100">Nothing planned this week</h3>
+        <p className="text-sm text-stone-600 dark:text-stone-400">See how it works with one click.</p>
+      </div>
+      <ExampleButton onExample={onExample} />
+    </section>
   )
 }
 

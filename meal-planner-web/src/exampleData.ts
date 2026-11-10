@@ -71,8 +71,9 @@ export async function addExampleData(weekStart: Date) {
   const existingRecipes = await api.recipes.list()
   for (const r of recipes) {
     let recipe = existingRecipes.find((x) => (x.name ?? '').toLowerCase() === r.name.toLowerCase())
-    if (!recipe) {
-      recipe = await api.recipes.create({ name: r.name, servings: r.servings })
+    if (!recipe) recipe = await api.recipes.create({ name: r.name, servings: r.servings })
+    // A recipe the user made themselves is left alone, unless it's still empty.
+    if (recipe.ingredients.length === 0) {
       for (const [name, quantity] of Object.entries(r.items)) {
         await api.recipes.addIngredient(recipe.id, { ingredientId: ingredientIds.get(name.toLowerCase())!, quantity })
       }
