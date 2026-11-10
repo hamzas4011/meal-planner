@@ -97,7 +97,9 @@ export default function PlanPage() {
       )}
 
       {data && (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={`Week, ${weekLabel}`}>
+        // Every row as tall as the tallest one, so the grid looks even. Not on phones (one column),
+        // where empty days would just become tall blank boxes.
+        <ul className="grid grid-cols-1 gap-3 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-4" aria-label={`Week, ${weekLabel}`}>
           {days.map((day) => {
             const iso = toIso(day)
             return (
@@ -238,6 +240,10 @@ function DayCard({ date, weekday, dayMonth, label, isToday, meals, recipes, run,
           </span>
         )}
       </h3>
+
+      {meals.length === 0 && !adding && (
+        <p className="text-sm text-stone-500 dark:text-stone-400">Nothing planned yet</p>
+      )}
 
       {meals.length > 0 && (
         <ul className="flex flex-col gap-1.5">
