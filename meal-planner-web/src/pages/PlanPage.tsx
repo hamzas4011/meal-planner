@@ -72,13 +72,8 @@ export default function PlanPage() {
 
   return (
     <section>
-      <PageTitle description="Plan your meals for the week. The shopping list adds up everything you need."
-        actions={
-          <Link to={`/shopping?from=${from}&to=${to}`}
-            className={`inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 font-medium sm:w-auto text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400`}>
-            <CartIcon className="size-4" /> Shopping list for {isThisWeek ? 'this week' : weekLabel}
-          </Link>
-        }>
+      {/* The shopping list is reached from the nav tab (it keeps this week) and the "This week" card. */}
+      <PageTitle description="Plan your meals for the week and get one shopping list with everything you need.">
         Week plan
       </PageTitle>
 
