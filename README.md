@@ -6,7 +6,7 @@ A full-stack web app to plan your meals for the week. It automatically works out
 
 **Add ingredients → build recipes → plan your week → get your shopping list.**
 
-**🔗 Live demo: [LIVE_DEMO_URL](LIVE_DEMO_URL)**
+**🔗 Live demo: [Open the app](https://meal-planner-fre2hnc2b6eghndf.swedencentral-01.azurewebsites.net/)**
 
 > No sign-up needed. Click **Try an example week** to fill the plan with sample recipes.
 > The demo runs on a free hosting plan, so the first load can take up to a minute while the server wakes up.
