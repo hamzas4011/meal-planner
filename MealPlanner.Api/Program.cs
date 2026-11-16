@@ -17,7 +17,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // In production (Render), bring the database schema up to date on startup,
+    // In production (Azure), bring the database schema up to date on startup,
     // so new migrations are applied automatically on every deploy.
     using var scope = app.Services.CreateScope();
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
