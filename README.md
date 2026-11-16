@@ -43,27 +43,13 @@ A full-stack web app to plan your meals for the week. It automatically works out
 
 ## Run locally
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download), [Node.js 22+](https://nodejs.org/) and a PostgreSQL database.
+Requires .NET 10, Node.js 22+ and PostgreSQL. Set the connection string with `dotnet user-secrets` in `MealPlanner.Api`, then:
 
 ```bash
-# 1. Install dependencies
-npm install
-npm install --prefix meal-planner-web
-
-# 2. Point the API at your database (stored outside the repo with user secrets)
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
-  "Host=localhost;Database=mealplanner;Username=postgres;Password=yourpassword" \
-  --project MealPlanner.Api
-
-# 3. Create the database tables
-dotnet tool install --global dotnet-ef   # only needed once
+npm install && npm install --prefix meal-planner-web
 dotnet ef database update --project MealPlanner.Api
-
-# 4. Start the API and the frontend together
 npm run dev
 ```
-
-Then open http://localhost:5173. Run the tests with `npm test`.
 
 ## Project structure
 
