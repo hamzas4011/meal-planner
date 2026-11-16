@@ -4,12 +4,13 @@
 
 A full-stack web app to plan your meals for the week. It automatically works out what you need to buy.
 
+Built with **React + TypeScript** on the frontend, an **ASP.NET Core (.NET 10) Web API** with **Entity Framework Core** on the backend, and **PostgreSQL** as the database. A **CI/CD** pipeline in **GitHub Actions** runs the tests on every push and deploys automatically to **Azure**.
+
 **Add ingredients → build recipes → plan your week → get your shopping list.**
 
 **🔗 Live demo: [Open the app](https://meal-planner-fre2hnc2b6eghndf.swedencentral-01.azurewebsites.net/)**
 
-> No sign-up needed. Click **Try an example week** to fill the plan with sample recipes.
-> The demo runs on a free hosting plan, so the first load can take up to a minute while the server wakes up.
+
 
 ## Screenshots
 
@@ -43,13 +44,27 @@ A full-stack web app to plan your meals for the week. It automatically works out
 
 ## Run locally
 
-Requires .NET 10, Node.js 22+ and PostgreSQL. Set the connection string with `dotnet user-secrets` in `MealPlanner.Api`, then:
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download), [Node.js 22+](https://nodejs.org/) and a PostgreSQL database.
 
 ```bash
-npm install && npm install --prefix meal-planner-web
+# 1. Install dependencies
+npm install
+npm install --prefix meal-planner-web
+
+# 2. Point the API at your database (stored outside the repo with user secrets)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+  "Host=localhost;Database=mealplanner;Username=postgres;Password=yourpassword" \
+  --project MealPlanner.Api
+
+# 3. Create the database tables
+dotnet tool install --global dotnet-ef   # only needed once
 dotnet ef database update --project MealPlanner.Api
+
+# 4. Start the API and the frontend together
 npm run dev
 ```
+
+Then open http://localhost:5173. Run the tests with `npm test`.
 
 ## Project structure
 
