@@ -19,9 +19,6 @@ A full-stack web app to plan your meals for the week. It automatically works out
 ### Recipes
 ![Recipes](docs/recipes.png)
 
-### Ingredients
-![Ingredients](docs/ingredients.png)
-
 ### Shopping list
 ![Shopping list](docs/shopping-list.png)
 
